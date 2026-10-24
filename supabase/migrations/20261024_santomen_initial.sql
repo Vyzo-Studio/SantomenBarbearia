@@ -185,7 +185,7 @@ begin
   );
 end $$;
 revoke all on function santomen_private.is_slot_free(uuid,date,time,integer) from public;
-grant execute on function santomen_private.is_slot_free(uuid,date,time,integer) to anon,authenticated;
+-- Private helper is called by owner-controlled public RPCs only.
 
 create or replace function public.santomen_public_catalog() returns jsonb language sql stable security definer set search_path='' as $$
 select jsonb_build_object(
@@ -194,7 +194,11 @@ select jsonb_build_object(
   'price_cents',s.price_cents,'duration_minutes',s.duration_minutes,'active',s.is_active
  ) order by s.sort_order,s.name) from public.santomen_services s where s.is_active), '[]'::jsonb),
  'barbers',coalesce((select jsonb_agg(jsonb_build_object('id',b.id,'name',b.name,'bio',b.bio,'active',b.is_active) order by b.name)
-  from public.santomen_barbers b where b.is_active),'[]'::jsonb)
+  from public.santomen_barbers b where b.is_active),'[]'::jsonb),
+ 'media',coalesce((select jsonb_agg(jsonb_build_object('id',m.id,'title',m.title,'category',m.category,'image_url',m.image_url) order by m.sort_order,m.created_at desc)
+  from public.santomen_media m where m.published),'[]'::jsonb),
+ 'settings',(select jsonb_build_object('name',st.name,'address',st.address,'whatsapp',st.whatsapp,'opening',st.opening,'closing',st.closing)
+  from public.santomen_settings st where st.id=1)
 );
 $$;
 revoke all on function public.santomen_public_catalog() from public;
