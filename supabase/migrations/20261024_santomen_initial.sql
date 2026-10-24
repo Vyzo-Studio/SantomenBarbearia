@@ -150,8 +150,7 @@ drop policy if exists santomen_blocks_admin on public.santomen_blocks;
 create policy santomen_blocks_admin on public.santomen_blocks for all to authenticated using(santomen_private.is_admin()) with check(santomen_private.is_admin());
 drop policy if exists santomen_bookings_admin_read on public.santomen_bookings;
 create policy santomen_bookings_admin_read on public.santomen_bookings for select to authenticated using(santomen_private.is_admin());
-drop policy if exists santomen_bookings_admin_update on public.santomen_bookings;
-create policy santomen_bookings_admin_update on public.santomen_bookings for update to authenticated using(santomen_private.is_admin()) with check(santomen_private.is_admin());
+-- Appointment status is changed only via a guarded transactional RPC (not direct table UPDATE).
 drop policy if exists santomen_cash_admin_read on public.santomen_cash_sessions;
 create policy santomen_cash_admin_read on public.santomen_cash_sessions for select to authenticated using(santomen_private.is_admin());
 drop policy if exists santomen_payments_admin_read on public.santomen_payments;
@@ -164,7 +163,7 @@ drop policy if exists santomen_media_admin on public.santomen_media;
 create policy santomen_media_admin on public.santomen_media for all to authenticated using(santomen_private.is_admin()) with check(santomen_private.is_admin());
 grant select on public.santomen_admins,public.santomen_settings,public.santomen_services,public.santomen_barbers,public.santomen_blocks,public.santomen_bookings,public.santomen_cash_sessions,public.santomen_payments,public.santomen_payment_allocations,public.santomen_refunds,public.santomen_media to authenticated;
 grant insert,update,delete on public.santomen_settings,public.santomen_services,public.santomen_barbers,public.santomen_blocks,public.santomen_media to authenticated;
-grant update(status,updated_at) on public.santomen_bookings to authenticated;
+-- No direct authenticated booking mutation; secure status/payment RPCs enforce transitions.
 revoke all on public.santomen_admins,public.santomen_settings,public.santomen_services,public.santomen_barbers,public.santomen_blocks,public.santomen_bookings,public.santomen_cash_sessions,public.santomen_payments,public.santomen_payment_allocations,public.santomen_refunds,public.santomen_media from anon;
 -- Internal overlap function; not exposed through public API.
 create or replace function santomen_private.is_slot_free(p_barber uuid,p_date date,p_start time,p_duration integer)
@@ -368,6 +367,29 @@ begin
 end $$;
 revoke all on function public.santomen_admin_refund(uuid,integer,text) from public;
 grant execute on function public.santomen_admin_refund(uuid,integer,text) to authenticated;
+
+
+-- Controlled status transitions: payment finalization is the only way to mark
+-- appointments completed. Past completed bookings remain immutable.
+create or replace function public.santomen_admin_set_booking_status(
+  p_booking_id uuid, p_status text)
+returns void language plpgsql security definer set search_path='' as $
+declare v_booking public.santomen_bookings%rowtype;
+begin
+ if not santomen_private.is_admin() then raise exception 'Não autorizado';end if;
+ if p_status not in ('confirmed','cancelled','rejected') then raise exception 'Transição não permitida';end if;
+ select * into v_booking from public.santomen_bookings where id=p_booking_id for update;
+ if not found then raise exception 'Atendimento não encontrado';end if;
+ if v_booking.status not in ('pending','confirmed') then raise exception 'Atendimento não pode ser alterado';end if;
+ if p_status='rejected' and v_booking.status<>'pending' then raise exception 'Rejeição disponível apenas para solicitações pendentes';end if;
+ if p_status='confirmed' and v_booking.status='confirmed' then return;end if;
+ if exists (select 1 from public.santomen_payments p where p.booking_id=p_booking_id) then
+  raise exception 'Existe pagamento; a alteração exige conciliação financeira';
+ end if;
+ update public.santomen_bookings set status=p_status, updated_at=now() where id=p_booking_id;
+end $;
+revoke all on function public.santomen_admin_set_booking_status(uuid,text) from public;
+grant execute on function public.santomen_admin_set_booking_status(uuid,text) to authenticated;
 
 -- IMPORTANT:
 -- 1. No admin user, services, barber or customer records are created by this migration.
