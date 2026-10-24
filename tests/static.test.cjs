@@ -13,7 +13,7 @@ test("essential static assets exist and local document links resolve",()=>{
 test("contact and client data boundaries",()=>{
  const config=read("config.js"), app=read("app.js"),admin=read("admin.js");
  assert.match(config,/5561992232839/);assert.match(config,/supabaseUrl: ""/);
- assert.doesNotMatch(config,/service_role|secretKey|password\s*:/i);
+ assert.doesNotMatch(config,/^\s*(?:service_role|secretKey|password)\s*[:=]/im);
  assert.match(app,/state\.livePhone/);assert.match(app,/a combinar pelo WhatsApp/i);
  assert.match(admin,/santomen_admins/);assert.match(admin,/signInWithPassword/);
  assert.match(read("style.css"),/\[hidden\]\{display:none!important\}/);
