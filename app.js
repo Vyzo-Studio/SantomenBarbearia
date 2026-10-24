@@ -7,7 +7,7 @@
   const backend=Boolean(/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||"") && /^sb_publishable_/.test(cfg.supabasePublishableKey||""));
   const copy=()=>window.SANTOMEN_I18N;
   const memoryKey="santomen:booking-contact:v1";
-  const state={services:[...(window.SANTOMEN_DEFAULT_SERVICES||[])],barbers:[],requestId:0};
+  const state={services:[...(window.SANTOMEN_DEFAULT_SERVICES||[])],barbers:[],media:[],requestId:0};
   const phoneDigits=value=>String(value||"").replace(/\D/g,"");
   const validPhone=value=>{const s=phoneDigits(value);return /^([1-9]\d)(9\d{8}|[2-8]\d{7})$/.test(s)};
   const money=cents=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(cents/100);
@@ -16,7 +16,7 @@
     const f=Object.fromEntries(p.map(x=>[x.type,x.value]));return f.year+"-"+f.month+"-"+f.day;
   };
   function message(text,kind="info"){const el=$("#booking-feedback");if(el){el.textContent=text;el.className="booking-message "+kind}}
-  function whatsappLink(text){return "https://wa.me/"+cfg.phone+"?text="+encodeURIComponent(text)}
+  function whatsappLink(text){return "https://wa.me/"+(cfg.livePhone||cfg.phone)+"?text="+encodeURIComponent(text)}
   function safeDate(val){if(!/^\d{4}-\d{2}-\d{2}$/.test(val))return false;const d=new Date(val+"T12:00:00");return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===val}
   async function rpc(name,params){
     if(!backend)throw Error("Agenda não configurada");
@@ -49,12 +49,57 @@
     for(const b of state.barbers.filter(b=>b.active!==false))select.append(new Option(b.name,String(b.id)));
     const msg=$("#team-message");if(msg && state.barbers.length){msg.textContent=state.barbers.map(b=>b.name).join(" • ")+". Consulte a disponibilidade de cada profissional na agenda."}
   }
+  function renderGallery(){
+    if(!state.media.length)return;
+    const root=$("#gallery"),filters=$("#gallery-filters"),dialog=$("#media-lightbox"),image=$("#lightbox-image"),caption=$("#lightbox-caption");
+    if(!root||!filters||!dialog)return;
+    root.replaceChildren();root.classList.add("has-gallery-media");
+    const all=state.media.filter(m=>{try{const url=new URL(m.image_url);return url.protocol==="https:"}catch{return false}});
+    if(!all.length)return;
+    const categories=["Todos",...new Set(all.map(m=>m.category||"Outros"))];
+    const buttons=categories.map(c=>{const btn=make("button","filter-chip",c);btn.type="button";btn.dataset.filter=c;return btn});
+    filters.replaceChildren(...buttons);filters.hidden=false;
+    const draw=category=>{
+      buttons.forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.filter===category)));
+      root.replaceChildren();
+      all.filter(m=>category==="Todos"||m.category===category).forEach((m,i)=>{
+        const btn=make("button","media-card");btn.type="button";btn.setAttribute("aria-label","Ampliar fotografia: "+m.title);
+        const img=make("img");img.src=m.image_url;img.alt=m.title;img.loading=i<2?"eager":"lazy";img.referrerPolicy="no-referrer";
+        const text=make("span","media-caption",m.title+" ↗");btn.append(img,text);
+        btn.addEventListener("click",()=>{image.src=m.image_url;image.alt=m.title;caption.textContent=m.title;dialog.showModal()});
+        root.append(btn);
+      });
+    };
+    buttons.forEach(btn=>btn.addEventListener("click",()=>draw(btn.dataset.filter)));
+    $("#close-lightbox").onclick=()=>dialog.close();
+    dialog.addEventListener("click",e=>{if(e.target===dialog)dialog.close()});
+    dialog.addEventListener("close",()=>image.removeAttribute("src"));
+    draw("Todos");
+    $("#gallery-note").textContent="Fotos divulgadas pela administração da Santomen Barbearia.";
+  }
+  function applyLiveSettings(settings){
+    if(!settings)return;
+    const phone=phoneDigits(settings.whatsapp||"");
+    if(/^55[1-9]\d{9,10}$/.test(phone)){
+      $('a[href^="https://wa.me/"]').forEach(a=>a.href="https://wa.me/"+phone);
+      cfg.livePhone=phone;
+    }
+    if(settings.address){
+      $(".location-address").textContent=settings.address;
+      const route=$('.location-actions a[href^="https://www.google.com/maps/"]');
+      if(route)route.href="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(settings.address);
+      $(".location-section .muted").textContent="Consulte o mapa e confirme a localização antes da visita.";
+    }
+    const hours=String(settings.opening||"").slice(0,5)+" – "+String(settings.closing||"").slice(0,5);
+    const hourLabel=$(".booking-meta strong:last-child");
+    if(hourLabel && settings.opening && settings.closing)hourLabel.textContent="SEG–SÁB · "+hours;
+  }
   async function loadCatalog(){
     if(!backend)return;
     try{
       const data=await rpc("santomen_public_catalog",{});
       if(!data||!Array.isArray(data.services)||!Array.isArray(data.barbers))throw Error("Resposta inválida");
-      state.services=data.services;state.barbers=data.barbers;renderServices();renderBarbers();
+      state.services=data.services;state.barbers=data.barbers;state.media=Array.isArray(data.media)?data.media:[];renderServices();renderBarbers();renderGallery();applyLiveSettings(data.settings);
       $("#services-note").textContent="Valores e durações exibidos conforme o cadastro atual da barbearia.";
       $("#booking-mode").textContent="AGENDA ONLINE";
       message("Escolha um serviço, uma data e um horário para solicitar seu agendamento.");
