@@ -7,7 +7,7 @@
   const backend=Boolean(/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||"") && /^sb_publishable_/.test(cfg.supabasePublishableKey||""));
   const copy=()=>window.SANTOMEN_I18N;
   const memoryKey="santomen:booking-contact:v1";
-  const state={services:[...(window.SANTOMEN_DEFAULT_SERVICES||[])],barbers:[],media:[],requestId:0};
+  const state={services:[...(window.SANTOMEN_DEFAULT_SERVICES||[])],barbers:[],media:[],livePhone:null,requestId:0};
   const phoneDigits=value=>String(value||"").replace(/\D/g,"");
   const validPhone=value=>{const s=phoneDigits(value);return /^([1-9]\d)(9\d{8}|[2-8]\d{7})$/.test(s)};
   const money=cents=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(cents/100);
@@ -16,7 +16,7 @@
     const f=Object.fromEntries(p.map(x=>[x.type,x.value]));return f.year+"-"+f.month+"-"+f.day;
   };
   function message(text,kind="info"){const el=$("#booking-feedback");if(el){el.textContent=text;el.className="booking-message "+kind}}
-  function whatsappLink(text){return "https://wa.me/"+(cfg.livePhone||cfg.phone)+"?text="+encodeURIComponent(text)}
+  function whatsappLink(text){return "https://wa.me/"+(state.livePhone||cfg.phone)+"?text="+encodeURIComponent(text)}
   function safeDate(val){if(!/^\d{4}-\d{2}-\d{2}$/.test(val))return false;const d=new Date(val+"T12:00:00");return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===val}
   async function rpc(name,params){
     if(!backend)throw Error("Agenda não configurada");
@@ -82,7 +82,7 @@
     const phone=phoneDigits(settings.whatsapp||"");
     if(/^55[1-9]\d{9,10}$/.test(phone)){
       $('a[href^="https://wa.me/"]').forEach(a=>a.href="https://wa.me/"+phone);
-      cfg.livePhone=phone;
+      state.livePhone=phone;
     }
     if(settings.address){
       $(".location-address").textContent=settings.address;
@@ -91,7 +91,7 @@
       $(".location-section .muted").textContent="Consulte o mapa e confirme a localização antes da visita.";
     }
     const hours=String(settings.opening||"").slice(0,5)+" – "+String(settings.closing||"").slice(0,5);
-    const hourLabel=$(".booking-meta strong:last-child");
+    const hourLabel=$(".booking-meta>div:last-child strong");
     if(hourLabel && settings.opening && settings.closing)hourLabel.textContent="SEG–SÁB · "+hours;
   }
   async function loadCatalog(){
