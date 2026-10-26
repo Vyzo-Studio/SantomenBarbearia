@@ -43,6 +43,7 @@ test("storefront and two interiors are listed as a complete horizontal gallery",
  for(const name of ["fachada","interior-1","interior-2"]){
    const p="assets/espaco-santomen-"+name+".avif";
    assert.ok(fs.existsSync(path.join(root,p)),"Missing media file "+p);
+   assert.ok(fs.statSync(path.join(root,p)).size > 250000, "Photo file is excessively compressed: "+p);
    assert.match(html,new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));
  }
  assert.match(html,/id="espaco"/);
