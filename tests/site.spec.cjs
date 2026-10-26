@@ -128,7 +128,7 @@ test("numbered decoration and admin shortcut are absent while form remains funct
  await expect(page.locator("#admin-panel")).toBeHidden();
  await expect(page.locator("#login-form button[type=submit]")).toBeDisabled();
 });
-test("the marquee advances, has identical adjacent tracks, and supports reduced motion",async({page})=>{
+test("the marquee advances with identical tracks even under reduced-motion preference",async({page})=>{
  await page.emulateMedia({reducedMotion:"no-preference"});
  await page.setViewportSize({width:1366,height:900});
  await page.goto("/");
@@ -148,7 +148,8 @@ test("the marquee advances, has identical adjacent tracks, and supports reduced 
  expect(Math.abs(seam.delta)).toBeLessThan(1);
  expect(seam.document).toBeLessThanOrEqual(seam.viewport+1);
  await page.emulateMedia({reducedMotion:"reduce"});
- await expect(track).toHaveCSS("animation-name","none");
+ await expect(track).toHaveCSS("animation-name","santomen-marquee");
+ await expect(track).toHaveCSS("animation-play-state","running");
 });
 test("marquee and menu do not cause horizontal overflow",async({page})=>{
  await page.emulateMedia({reducedMotion:"no-preference"});
@@ -162,42 +163,33 @@ test("marquee and menu do not cause horizontal overflow",async({page})=>{
  }
 });
 
-test("visitor can enable animation even with reduced motion active and it persists",async({page})=>{
+
+test("marquee always moves without any pause button for both system motion settings",async({page})=>{
+ for(const mode of ["no-preference","reduce"]){
+  await page.emulateMedia({reducedMotion:mode});
+  await page.goto("/");
+  await expect(page.locator("#marquee-motion-toggle")).toHaveCount(0);
+  const track=page.locator(".marquee-track");
+  await expect(track).toHaveCSS("animation-name","santomen-marquee");
+  await expect(track).toHaveCSS("animation-play-state","running");
+  const before=await track.evaluate(el=>getComputedStyle(el).transform);
+  await page.waitForTimeout(450);
+  const after=await track.evaluate(el=>getComputedStyle(el).transform);
+  expect(before).not.toBe(after);
+ }
+});
+test("old saved pause setting is ignored and language changes do not stop ticker",async({page})=>{
+ await page.addInitScript(()=>localStorage.setItem("santomen:marquee-motion","off"));
  await page.emulateMedia({reducedMotion:"reduce"});
  await page.goto("/");
- const ticker=page.locator(".marquee-track"),button=page.locator("#marquee-motion-toggle");
- await expect(ticker).toHaveCSS("animation-name","none");
- await expect(button).toHaveAttribute("aria-pressed","false");
- await expect(button).toHaveAttribute("aria-label","Ativar movimento da faixa");
- await button.click();
- await expect(ticker).toHaveCSS("animation-name","santomen-marquee");
- await expect(button).toHaveAttribute("aria-pressed","true");
- const before=await ticker.evaluate(el=>getComputedStyle(el).transform);
- await page.waitForTimeout(350);
- const after=await ticker.evaluate(el=>getComputedStyle(el).transform);
- expect(before).not.toBe(after);
- await page.reload();
- await expect(button).toHaveAttribute("aria-pressed","true");
- await expect(ticker).toHaveCSS("animation-name","santomen-marquee");
- await button.click();
- await expect(ticker).toHaveCSS("animation-name","none");
- await expect(button).toHaveAttribute("aria-pressed","false");
-});
-test("normal-motion banner moves, can be paused and does not restart on language switch",async({page})=>{
- await page.emulateMedia({reducedMotion:"no-preference"});
- await page.goto("/");
- const ticker=page.locator(".marquee-track"),button=page.locator("#marquee-motion-toggle");
- await expect(ticker).toHaveCSS("animation-name","santomen-marquee");
- await expect(button).toHaveAttribute("aria-pressed","true");
- const before=await ticker.evaluate(el=>getComputedStyle(el).transform);
- await page.waitForTimeout(300);
- const after=await ticker.evaluate(el=>getComputedStyle(el).transform);
- expect(before).not.toBe(after);
+ const track=page.locator(".marquee-track");
+ await expect(track).toHaveCSS("animation-name","santomen-marquee");
  await page.locator("#language-trigger").click();
  await page.locator('[data-language="en"]').click();
- await expect(button).toHaveAttribute("aria-label","Pause the moving banner");
- await expect(ticker).toHaveCSS("animation-name","santomen-marquee");
- await button.click();
- await expect(ticker).toHaveCSS("animation-name","none");
- await expect(button).toHaveAttribute("aria-label","Play the moving banner");
+ await expect(track).toHaveCSS("animation-play-state","running");
+ const before=await track.evaluate(el=>getComputedStyle(el).transform);
+ await page.waitForTimeout(350);
+ const after=await track.evaluate(el=>getComputedStyle(el).transform);
+ expect(before).not.toBe(after);
+ await expect(page.locator("#marquee-motion-toggle")).toHaveCount(0);
 });

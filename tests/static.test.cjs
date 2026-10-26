@@ -89,7 +89,7 @@ test("ticker has identical halves, seamless 50% shift and reduced motion support
  assert.match(css,/animation:santomen-marquee 30s linear infinite/);
  assert.match(css,/translate3d\(-50%,0,0\)/);
  assert.match(css,/prefers-reduced-motion:reduce/);
- assert.match(css,/\.marquee-track\{animation:none!important/);
+ assert.match(css,/\.marquee \.marquee-track\{animation:santomen-marquee 30s linear infinite!important/);
 });
 test("admin route is not security by obscurity; Supabase integration remains fail-closed",()=>{
  const config=read("config.js"),admin=read("admin.js"),adminHtml=read("admin.html");
@@ -105,15 +105,15 @@ test("admin route is not security by obscurity; Supabase integration remains fai
  assert.match(config,/supabasePublishableKey: ""/);
 });
 
-test("marquee offers play/pause with explicit reduced-motion override",()=>{
+
+test("ticker stays animated without controls, regardless of motion preference",()=>{
  const html=read("index.html"),css=read("style.css"),app=read("app.js");
- assert.match(html,/id="marquee-motion-toggle"/);
- assert.match(html,/data-motion="auto"/);
- assert.match(html,/style\.css\?v=marquee-motion-2/);
- assert.match(html,/app\.js\?v=marquee-motion-2/);
- assert.match(css,/\.marquee\[data-motion="on"\] \.marquee-track/);
- assert.match(css,/\.marquee\[data-motion="off"\] \.marquee-track/);
- assert.match(app,/santomen:marquee-motion/);
- assert.match(app,/localStorage\.setItem\(key,saved\)/);
- assert.match(app,/matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+ assert.doesNotMatch(html,/marquee-motion-toggle|data-motion="auto"/);
+ assert.doesNotMatch(css,/marquee-motion-toggle|\[data-motion=/);
+ assert.doesNotMatch(app,/setupMarquee|santomen:marquee-motion/);
+ assert.match(html,/style\.css\?v=marquee-always-3/);
+ assert.match(html,/app\.js\?v=marquee-always-3/);
+ assert.match(css,/\.marquee \.marquee-track\{animation:santomen-marquee 30s linear infinite!important/);
+ assert.match(css,/animation-duration:30s!important;animation-play-state:running!important/);
+ assert.doesNotMatch(css,/\.marquee-track\{animation:none/);
 });
