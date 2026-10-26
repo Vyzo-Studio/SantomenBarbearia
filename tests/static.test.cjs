@@ -117,3 +117,26 @@ test("ticker stays animated without controls, regardless of motion preference",(
  assert.match(css,/animation-duration:30s!important;animation-play-state:running!important/);
  assert.doesNotMatch(css,/\.marquee-track\{animation:none/);
 });
+
+
+test("Santomen mobile navigation has four branded, functional and accessible actions",()=>{
+ const html=read("index.html"),css=read("style.css"),app=read("app.js"),i18n=read("i18n.js");
+ const block=html.match(/<nav class="santomen-mobile-nav"[\s\S]*?<\/nav>/);
+ assert.ok(block,"mobile navigation present");
+ const hrefs=[...block[0].matchAll(/<a[^>]*href="([^"]+)"/g)].map(x=>x[1]);
+ assert.deepEqual(hrefs,["#servicos","#agendar","https://www.instagram.com/santomenbarbearia/","#localizacao"]);
+ assert.equal((block[0].match(/class="santomen-mobile-icon"/g)||[]).length,4);
+ assert.doesNotMatch(block[0],/admin\.html|planos|assinaturas|GNG/i);
+ assert.match(block[0],/aria-label="Navegação rápida da Santomen"/);
+ assert.match(block[0],/target="_blank" rel="noopener noreferrer"/);
+ for(const id of ["servicos","agendar","localizacao"])assert.match(html,new RegExp('id="'+id+'"'));
+ for(const key of ["mobileValues","mobileBook","mobileInstagram","mobileLocal"])assert.match(i18n,new RegExp(key+':'));
+ assert.match(css,/@media\(max-width:767px\)/);
+ assert.match(css,/env\(safe-area-inset-bottom,0px\)/);
+ assert.match(css,/santomen-mobile-link--primary/);
+ assert.match(css,/body\.santomen-booking-input-active/);
+ assert.match(app,/function setupMobileBottomNavigation/);
+ assert.match(app,/IntersectionObserver/);
+ assert.match(app,/scrollIntoView\(/);
+ assert.doesNotMatch(block[0],/https:\/\/www\.google\.com\/maps/);
+});

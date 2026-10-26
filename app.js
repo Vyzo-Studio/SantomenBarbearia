@@ -186,6 +186,65 @@
       finally{button.disabled=false;button.textContent=original}
     });
   }
+
+  function setupMobileBottomNavigation(){
+    const nav=$("#santomen-mobile-nav");
+    if(!nav)return;
+    const sectionIds=["servicos","agendar","localizacao"];
+    const sections=sectionIds.map(id=>({id,element:document.getElementById(id),link:nav.querySelector('[data-mobile-target="'+id+'"]')}))
+      .filter(item=>item.element&&item.link);
+    const links=$("a[data-mobile-target]",nav);
+    const editable='input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),textarea,select';
+    let frame=0;
+    function updateActive(){
+      frame=0;
+      const isMobile=window.matchMedia("(max-width: 767px)").matches;
+      const y=Math.min(window.innerHeight*.35,window.innerHeight-45);
+      const selected=isMobile?sections.find(({element})=>{
+        const box=element.getBoundingClientRect();
+        return box.top<=y&&box.bottom>=y;
+      }):null;
+      for(const {id,link} of sections){
+        const active=Boolean(selected&&selected.id===id);
+        link.classList.toggle("is-active",active);
+        if(active)link.setAttribute("aria-current","location");
+        else link.removeAttribute("aria-current");
+      }
+    }
+    function schedule(){if(!frame)frame=requestAnimationFrame(updateActive)}
+    links.forEach(link=>{
+      link.addEventListener("click",event=>{
+        const target=link.dataset.mobileTarget;
+        if(!target)return;
+        if(target==="agendar"&&window.matchMedia("(max-width: 767px)").matches){
+          const card=$(".booking-card"),section=$("#agendar");
+          if(!card||!section)return;
+          event.preventDefault();
+          if(location.hash!=="#agendar")history.pushState(null,"","#agendar");
+          const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          card.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
+        }
+        // All local links retain their real section anchor and browser history.
+        schedule();
+      });
+    });
+    window.addEventListener("scroll",schedule,{passive:true});
+    window.addEventListener("resize",schedule,{passive:true});
+    window.addEventListener("hashchange",schedule);
+    window.addEventListener("popstate",schedule);
+    if("IntersectionObserver" in window){
+      const observer=new IntersectionObserver(schedule,{rootMargin:"-15% 0px -55% 0px",threshold:0});
+      sections.forEach(({element})=>observer.observe(element));
+    }
+    function editing(){
+      const focused=document.activeElement;
+      const hidden=Boolean(focused&&focused.closest("#booking-form")&&focused.matches(editable));
+      document.body.classList.toggle("santomen-booking-input-active",hidden);
+    }
+    document.addEventListener("focusin",editing);
+    document.addEventListener("focusout",()=>requestAnimationFrame(editing));
+    schedule();
+  }
   function setupNavigation(){
     $("#year").textContent=String(new Date().getFullYear());
     const toggle=$("#menu-toggle"), menu=$("#nav-menu");
@@ -194,7 +253,7 @@
     document.addEventListener("keydown",ev=>{if(ev.key==="Escape"){menu.classList.remove("open");toggle.setAttribute("aria-expanded","false")}});
   }
   function setup(){
-    setupNavigation();renderServices();renderBarbers();setupForm();loadCatalog();
+    setupNavigation();setupMobileBottomNavigation();renderServices();renderBarbers();setupForm();loadCatalog();
     document.addEventListener("santomen:language",()=>{renderServices();renderBarbers()});
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup,{once:true});else setup();

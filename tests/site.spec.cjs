@@ -193,3 +193,89 @@ test("old saved pause setting is ignored and language changes do not stop ticker
  expect(before).not.toBe(after);
  await expect(page.locator("#marquee-motion-toggle")).toHaveCount(0);
 });
+
+
+test("mobile bar has exact actions, accessible labels, no overflow and remains fixed",async({page})=>{
+ for(const width of [320,360,375,390,430,767]){
+  await page.setViewportSize({width,height:780});
+  await page.emulateMedia({reducedMotion:"reduce"});
+  await page.goto("/");
+  const nav=page.getByRole("navigation",{name:"Navegação rápida da Santomen"});
+  await expect(nav).toBeVisible();
+  const anchors=nav.locator("a");
+  await expect(anchors).toHaveCount(4);
+  const hrefs=await anchors.evaluateAll(a=>a.map(x=>x.getAttribute("href")));
+  expect(hrefs).toEqual(["#servicos","#agendar","https://www.instagram.com/santomenbarbearia/","#localizacao"]);
+  await expect(nav.locator('[data-mobile-target="agendar"]')).toHaveCSS("background-color","rgb(244, 217, 0)");
+  await expect(nav.locator('[href^="https://www.instagram.com/"]')).toHaveAttribute("target","_blank");
+  await expect(nav.locator('[href^="https://www.instagram.com/"]')).toHaveAttribute("rel","noopener noreferrer");
+  const metrics=await page.evaluate(()=>{
+   const nav=document.getElementById("santomen-mobile-nav"),box=nav.getBoundingClientRect();
+   return {position:getComputedStyle(nav).position,left:box.left,right:box.right,windowWidth:innerWidth,document:document.documentElement.scrollWidth,body:document.body.scrollWidth,touch:[...nav.querySelectorAll("a")].map(a=>a.getBoundingClientRect().height),barBottom:innerHeight-box.bottom};
+  });
+  expect(metrics.position).toBe("fixed");
+  expect(metrics.left).toBeGreaterThanOrEqual(-1);
+  expect(metrics.right).toBeLessThanOrEqual(width+1);
+  expect(metrics.document).toBeLessThanOrEqual(width+1);
+  expect(metrics.body).toBeLessThanOrEqual(width+1);
+  for(const t of metrics.touch)expect(t).toBeGreaterThanOrEqual(44);
+  await page.evaluate(()=>scrollTo({top:document.body.scrollHeight,behavior:"instant"}));
+  await expect(nav).toBeVisible();
+ }
+});
+test("Valores and Local scroll to existing headings and update active state",async({page})=>{
+ await page.setViewportSize({width:390,height:800});
+ await page.emulateMedia({reducedMotion:"reduce"});
+ await page.goto("/");
+ const nav=page.locator("#santomen-mobile-nav");
+ await nav.locator('[data-mobile-target="servicos"]').click();
+ await expect(page).toHaveURL(/#servicos$/);
+ await expect.poll(async()=>page.locator("#servicos").evaluate(el=>el.getBoundingClientRect().top)).toBeLessThan(130);
+ await expect(nav.locator('[data-mobile-target="servicos"]')).toHaveAttribute("aria-current","location");
+ await nav.locator('[data-mobile-target="localizacao"]').click();
+ await expect(page).toHaveURL(/#localizacao$/);
+ await expect.poll(async()=>page.locator("#localizacao").evaluate(el=>el.getBoundingClientRect().top)).toBeLessThan(130);
+ await expect(nav.locator('[data-mobile-target="localizacao"]')).toHaveAttribute("aria-current","location");
+ await expect(page.locator(".santomen-map-card")).toBeVisible();
+});
+test("Agendar takes visitors straight to existing form without erasing fields or submitting",async({page})=>{
+ await page.setViewportSize({width:390,height:800});
+ await page.emulateMedia({reducedMotion:"reduce"});
+ await page.goto("/");
+ await page.locator("#customer-name").fill("Cliente Teste");
+ await page.locator("#customer-name").blur();
+ await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
+ await page.locator('#santomen-mobile-nav [data-mobile-target="agendar"]').click();
+ await expect(page).toHaveURL(/#agendar$/);
+ await expect.poll(async()=>page.locator(".booking-card").evaluate(el=>el.getBoundingClientRect().top)).toBeLessThan(160);
+ await expect(page.locator("#customer-name")).toHaveValue("Cliente Teste");
+ await expect(page.locator("#booking-mode")).toContainText("CONSULTA VIA WHATSAPP");
+ await expect(page.locator("#booking-form")).toBeVisible();
+ await expect(page.locator("#privacy-ack")).not.toBeChecked();
+ await expect(page.locator('#santomen-mobile-nav [data-mobile-target="agendar"]')).toHaveAttribute("aria-current","location");
+});
+test("desktop retains header and does not display mobile bar",async({page})=>{
+ for(const width of [768,1024,1366,1920]){
+  await page.setViewportSize({width,height:900});
+  await page.goto("/");
+  await expect(page.locator("#santomen-mobile-nav")).toBeHidden();
+  await expect(page.locator(".site-header")).toBeVisible();
+ }
+});
+test("mobile navigation does not obscure booking editing or modal content",async({page})=>{
+ await page.setViewportSize({width:360,height:640});
+ await page.goto("/");
+ const nav=page.locator("#santomen-mobile-nav");
+ await page.locator("#customer-phone").focus();
+ await expect(nav).toBeHidden();
+ await page.locator("#customer-phone").blur();
+ await expect(nav).toBeVisible();
+ await page.evaluate(()=>document.querySelector("#media-lightbox").showModal());
+ await expect(nav).toBeHidden();
+ await expect(page.locator("#media-lightbox")).toBeVisible();
+ await page.locator("#close-lightbox").click();
+ await expect(nav).toBeVisible();
+ await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:"instant"}));
+ const box=await page.locator(".footer-bottom").evaluate(el=>({footer:el.getBoundingClientRect().bottom,nav:document.getElementById("santomen-mobile-nav").getBoundingClientRect().top}));
+ expect(box.footer).toBeLessThan(box.nav);
+});

@@ -92,3 +92,96 @@
 /* Always-running brand ticker. This specific, final rule also overrides the
    global reduced-motion animation-duration setting without changing other animations. */
 .marquee .marquee-track{animation:santomen-marquee 30s linear infinite!important;animation-duration:30s!important;animation-play-state:running!important;will-change:transform}
+
+
+/* Santomen / mobile-only fast actions; independent from the desktop header. */
+.santomen-mobile-nav{display:none}
+@media(max-width:767px){
+  html{scroll-padding-top:90px;scroll-padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+  body{padding-bottom:calc(102px + env(safe-area-inset-bottom,0px))}
+  #servicos,#agendar,#localizacao,.booking-card{scroll-margin-top:90px}
+  .santomen-mobile-nav{
+    position:fixed;
+    inset-inline:0;
+    bottom:max(8px,env(safe-area-inset-bottom,0px));
+    z-index:60;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1.14fr) minmax(0,1.12fr) minmax(0,1fr);
+    align-items:stretch;
+    gap:4px;
+    width:min(calc(100% - 20px),464px);
+    margin-inline:auto;
+    padding:6px;
+    border:1px solid #414446;
+    border-radius:18px;
+    background:rgba(21,23,25,.97);
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    color:#f0eee8;
+    transition:opacity .2s ease,visibility .2s ease,transform .2s ease;
+  }
+  .santomen-mobile-link{
+    position:relative;
+    display:flex;
+    min-width:0;
+    min-height:59px;
+    padding:8px 2px 7px;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    border:1px solid transparent;
+    border-radius:12px;
+    background:transparent;
+    color:#e5e5df;
+    text-align:center;
+    font:800 10px/1.12 "Barlow Condensed",Impact,sans-serif;
+    letter-spacing:.035em;
+    white-space:nowrap;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  .santomen-mobile-link:hover{color:var(--yellow)}
+  .santomen-mobile-link:active{transform:scale(.96)}
+  .santomen-mobile-link:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
+  .santomen-mobile-icon{flex:none;width:21px;height:21px}
+  .santomen-mobile-link[aria-current="location"]{
+    background:#30332e;
+    color:var(--yellow);
+    border-color:#66603a;
+  }
+  .santomen-mobile-link--primary{
+    background:var(--yellow);
+    border-color:var(--yellow);
+    color:var(--ink);
+    box-shadow:0 2px 9px rgba(244,217,0,.12);
+  }
+  .santomen-mobile-link--primary:hover{color:var(--ink);background:#ffe835}
+  .santomen-mobile-link--primary[aria-current="location"]{
+    color:var(--ink);
+    background:var(--yellow);
+    border-color:#fff4a9;
+    box-shadow:inset 0 0 0 1px #131414,0 0 0 1px var(--yellow);
+  }
+  body.santomen-booking-input-active .santomen-mobile-nav,
+  body:has(dialog[open]) .santomen-mobile-nav{
+    visibility:hidden;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(12px);
+  }
+}
+@media(max-width:359px){
+  .santomen-mobile-nav{width:calc(100% - 12px);gap:2px;padding:5px}
+  .santomen-mobile-link{font-size:9.5px;letter-spacing:0;min-height:56px}
+  .santomen-mobile-icon{width:19px;height:19px}
+}
+@media(max-width:767px) and (max-height:430px){
+  .santomen-mobile-nav{bottom:max(4px,env(safe-area-inset-bottom,0px));padding:4px}
+  .santomen-mobile-link{min-height:48px;gap:2px;padding:4px 2px;font-size:9px}
+  .santomen-mobile-icon{width:17px;height:17px}
+}
+@media(prefers-reduced-motion:reduce){
+  .santomen-mobile-nav,.santomen-mobile-link{transition:none!important}
+}
