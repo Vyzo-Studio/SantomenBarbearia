@@ -273,6 +273,9 @@ test("mobile navigation does not obscure booking editing or modal content",async
  await expect(nav).toBeHidden();
  await expect(page.locator("#media-lightbox")).toBeVisible();
  await page.locator("#close-lightbox").click();
+ // Browsers may restore focus to the preceding booking field after dialog closes.
+ // The nav intentionally remains hidden while a booking field has focus.
+ await page.evaluate(()=>document.activeElement?.blur());
  await expect(nav).toBeVisible();
  await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:"instant"}));
  const box=await page.locator(".footer-bottom").evaluate(el=>({footer:el.getBoundingClientRect().bottom,nav:document.getElementById("santomen-mobile-nav").getBoundingClientRect().top}));
