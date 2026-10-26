@@ -51,3 +51,56 @@ test("storefront and two interiors are listed as a complete horizontal gallery",
  assert.match(read("style.css"),/\.shop-space-photo\{[^}]*aspect-ratio:16\/9/);
  assert.match(read(".github/workflows/santomen-pages.yml"),/cp -R assets\/\. _site\/assets\//);
 });
+
+test("public page has no decorative section numbers or administrative navigation",()=>{
+ const html=read("index.html"),app=read("app.js");
+ assert.doesNotMatch(html,/href="admin\.html"/i);
+ assert.doesNotMatch(html,/ÁREA ADMINISTRATIVA/);
+ const tags=[...html.matchAll(/<div class="section-tag">([\s\S]*?)<\/div>/g)].map(match=>match[1]);
+ assert.equal(tags.length,7);
+ for(const tag of tags)assert.doesNotMatch(tag,/0[1-9]\s*\/|✳\s*\//);
+ assert.doesNotMatch(html,/class="art-index"|class="service-index"|01\s*\/\s*(?:ESTILO|EXTERIOR)/);
+ assert.doesNotMatch(app,/make\("div","service-index"/);
+ assert.match(html,/id="booking-form"/);
+ assert.match(html,/href="privacidade\.html"/);
+ assert.match(html,/href="termos\.html"/);
+ assert.match(read("admin.html"),/id="admin-login"/);
+});
+test("language selector keeps five choices, user persistence and accessible menu wiring",()=>{
+ const html=read("index.html"),css=read("style.css"),js=read("i18n.js");
+ const expected=["pt","en","es","ja","de"];
+ for(const language of expected)assert.match(html,new RegExp('data-language="'+language+'"'));
+ assert.equal((html.match(/role="menuitemradio"/g)||[]).length,5);
+ assert.match(html,/aria-haspopup="menu"/);
+ assert.match(html,/id="language-menu" role="menu"/);
+ assert.match(css,/\.language-option\[aria-checked="true"\]/);
+ assert.match(css,/\.language-menu\[hidden\]/);
+ assert.doesNotMatch(css,/\.language-switcher option\{color:#111\}/);
+ assert.match(js,/localStorage\.setItem\(storageKey,active\)/);
+ assert.match(js,/event\.key==="ArrowDown"/);
+ assert.match(js,/event\.key==="Escape"/);
+});
+test("ticker has identical halves, seamless 50% shift and reduced motion support",()=>{
+ const html=read("index.html"),css=read("style.css");
+ const groups=[...html.matchAll(/<div class="marquee-group" aria-hidden="true">([\s\S]*?)<\/div>/g)];
+ assert.equal(groups.length,2);
+ assert.equal(groups[0][1],groups[1][1]);
+ assert.equal((groups[0][1].match(/class="marquee-word"/g)||[]).length,10);
+ assert.match(css,/animation:santomen-marquee 38s linear infinite/);
+ assert.match(css,/translate3d\(-50%,0,0\)/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+ assert.match(css,/\.marquee-track\{animation:none!important/);
+});
+test("admin route is not security by obscurity; Supabase integration remains fail-closed",()=>{
+ const config=read("config.js"),admin=read("admin.js"),adminHtml=read("admin.html");
+ const sql=read("supabase/migrations/20261024_santomen_initial.sql");
+ assert.match(adminHtml,/noindex,nofollow,noarchive/);
+ assert.match(admin,/db\.auth\.getUser\(\)/);
+ assert.match(admin,/\.from\("santomen_admins"\)/);
+ assert.match(admin,/signInWithPassword/);
+ assert.match(admin,/if\(!configured\)/);
+ assert.match(sql,/santomen_private\.is_admin\(\)/);
+ assert.match(sql,/enable row level security/i);
+ assert.match(config,/supabaseUrl: ""/);
+ assert.match(config,/supabasePublishableKey: ""/);
+});
