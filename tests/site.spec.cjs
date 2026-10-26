@@ -53,3 +53,20 @@ test("location map opens the exact Santomen directions",async({page})=>{
  }
  await expect(page.locator(".location-address")).toContainText("Loja 02");
 });
+
+test("real shop photos load in landscape format on desktop and mobile",async({page})=>{
+ for(const width of [390,1366]){
+  await page.setViewportSize({width,height:900});
+  await page.goto("/#espaco");
+  const gallery=page.locator("#espaco .shop-space-photo");
+  await expect(gallery).toHaveCount(3);
+  for(const link of await gallery.all()){
+   await expect(link).toBeVisible();
+   await expect(link).toHaveAttribute("target","_blank");
+   const img=link.locator("img");
+   await expect(img).toHaveJSProperty("complete",true);
+   const ok=await img.evaluate(i=>i.naturalWidth>0&&i.naturalHeight>0&&Math.abs(i.naturalWidth/i.naturalHeight-16/9)<0.03);
+   expect(ok).toBe(true);
+  }
+ }
+});
