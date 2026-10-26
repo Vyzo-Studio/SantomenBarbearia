@@ -86,8 +86,14 @@
     }
     if(settings.address){
       $(".location-address").textContent=settings.address;
-      const route=$('.location-actions a[href^="https://www.google.com/maps/"]');
-      if(route)route.href="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(settings.address);
+      // Preserve the exact Google Maps business route for the current address.
+      // If the owner changes the official address later, update both links and the preview.
+      if(String(settings.address).trim() !== cfg.address){
+        const destination="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(settings.address);
+        document.querySelectorAll("[data-santomen-map-link]").forEach(a=>{a.href=destination});
+        const frame=$(".santomen-map-iframe");
+        if(frame)frame.src="https://www.google.com/maps?q="+encodeURIComponent(settings.address)+"&output=embed";
+      }
       $(".location-section .muted").textContent="Consulte o mapa e confirme a localização antes da visita.";
     }
     const hours=String(settings.opening||"").slice(0,5)+" – "+String(settings.closing||"").slice(0,5);
