@@ -39,3 +39,17 @@ test("desktop and tablet layouts avoid horizontal clipping",async({page})=>{
    expect(dimensions.body).toBeLessThanOrEqual(dimensions.viewport+1);
  }
 });
+
+test("location map opens the exact Santomen directions",async({page})=>{
+ await page.goto("/#localizacao");
+ const map=page.locator(".santomen-map-card");
+ await expect(map).toBeVisible();
+ await expect(map.locator("iframe")).toHaveAttribute("src",/google\.com\/maps\?q=Barbearia%20Santomen/);
+ const links=page.locator("[data-santomen-map-link]");
+ await expect(links).toHaveCount(2);
+ for(const link of await links.all()){
+   await expect(link).toHaveAttribute("href",/0x935bcd6138a62181:0xd1f884d82245867d/);
+   await expect(link).toHaveAttribute("target","_blank");
+ }
+ await expect(page.locator(".location-address")).toContainText("Loja 02");
+});
