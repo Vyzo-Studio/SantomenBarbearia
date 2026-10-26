@@ -90,7 +90,7 @@
 @media(max-width:540px){.shop-space-grid{grid-template-columns:1fr;gap:13px}.shop-space-photo--exterior{grid-column:auto}.shop-space-photo{aspect-ratio:16/9}.shop-space-photo-info strong{font-size:26px}.shop-space-open{right:13px;bottom:12px}.shop-space-kicker{font-size:9px}}
 
 /* The continuous brand ticker is static when the visitor requests reduced motion. */
-@media(prefers-reduced-motion:reduce){.marquee-track{animation:none!important;transform:none!important;will-change:auto}}
+@media(prefers-reduced-motion:reduce){.marquee-track{animation:none!important;will-change:auto}}
 
 /* Marquee motion preferences — explicit visitor choice overrides OS motion reduction. */
 .marquee{position:relative}
