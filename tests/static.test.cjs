@@ -28,3 +28,12 @@ test("database migration includes isolation, row security and atomic money rules
  assert.match(sql,/santomen_admin_record_payment/);assert.match(sql,/santomen_admin_refund/);
  assert.doesNotMatch(sql,/ueqfokfnjsjgocotvdae|pmhpgrdeknzbvegkrnxi/);
 });
+
+test("Santomen map anchors and verified address remain present",()=>{
+ const html=read("index.html"),cfg=read("config.js");
+ assert.match(html,/class="santomen-map-iframe"/);
+ assert.match(html,/class="santomen-map-cover"/);
+ assert.match(html,/0x935bcd6138a62181:0xd1f884d82245867d/);
+ assert.match(html,/St\. M QNM 20, Loja 02/);
+ assert.match(cfg,/St\. M QNM 20, Loja 02/);
+});
