@@ -19,11 +19,10 @@ test("mobile navigation and booking form remain usable",async({page})=>{
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);
  expect(overflow).toBe(false);
 });
-test("private dashboard fails closed with no independent database",async({page})=>{
+test("shared Supabase admin panel remains private without Santomen authorization",async({page})=>{
  await page.goto("/admin.html");await expect(page.locator("#admin-login")).toBeVisible();
  await expect(page.locator("#admin-panel")).toBeHidden();
- await expect(page.locator("#login-feedback")).toContainText("não foi configurado");
- await expect(page.locator("#login-form button[type='submit']")).toBeDisabled();
+ await expect(page.locator("#login-form button[type='submit']")).toBeEnabled();
 });
 test("legal pages load and preserve navigation",async({page})=>{
  for(const name of ["privacidade.html","termos.html"]){
@@ -126,7 +125,7 @@ test("numbered decoration and admin shortcut are absent while form remains funct
  await expect(page.locator("#privacy-ack")).not.toBeChecked();
  await page.goto("/admin.html");
  await expect(page.locator("#admin-panel")).toBeHidden();
- await expect(page.locator("#login-form button[type=submit]")).toBeDisabled();
+ await expect(page.locator("#login-form button[type=submit]")).toBeEnabled();
 });
 test("the marquee advances with identical tracks even under reduced-motion preference",async({page})=>{
  await page.emulateMedia({reducedMotion:"no-preference"});
@@ -278,4 +277,11 @@ test("mobile navigation does not obscure booking editing or modal content",async
  await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:"instant"}));
  const box=await page.locator(".footer-bottom").evaluate(el=>({footer:el.getBoundingClientRect().bottom,nav:document.getElementById("santomen-mobile-nav").getBoundingClientRect().top}));
  expect(box.footer).toBeLessThan(box.nav);
+});
+
+test("online booking stays intentionally off until Santomen has authorized real catalog",async({page})=>{
+ await page.goto("/");
+ await expect(page.locator("#booking-mode")).toContainText("CONSULTA VIA WHATSAPP");
+ await expect(page.locator("#service option")).toHaveCount(4);
+ await expect(page.locator("#booking-time")).toHaveValue("a_combinar");
 });
