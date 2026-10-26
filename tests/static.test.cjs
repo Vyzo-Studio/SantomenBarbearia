@@ -86,7 +86,7 @@ test("ticker has identical halves, seamless 50% shift and reduced motion support
  assert.equal(groups.length,2);
  assert.equal(groups[0][1],groups[1][1]);
  assert.equal((groups[0][1].match(/class="marquee-word"/g)||[]).length,10);
- assert.match(css,/animation:santomen-marquee 38s linear infinite/);
+ assert.match(css,/animation:santomen-marquee 30s linear infinite/);
  assert.match(css,/translate3d\(-50%,0,0\)/);
  assert.match(css,/prefers-reduced-motion:reduce/);
  assert.match(css,/\.marquee-track\{animation:none!important/);
@@ -103,4 +103,17 @@ test("admin route is not security by obscurity; Supabase integration remains fai
  assert.match(sql,/enable row level security/i);
  assert.match(config,/supabaseUrl: ""/);
  assert.match(config,/supabasePublishableKey: ""/);
+});
+
+test("marquee offers play/pause with explicit reduced-motion override",()=>{
+ const html=read("index.html"),css=read("style.css"),app=read("app.js");
+ assert.match(html,/id="marquee-motion-toggle"/);
+ assert.match(html,/data-motion="auto"/);
+ assert.match(html,/style\.css\?v=marquee-motion-2/);
+ assert.match(html,/app\.js\?v=marquee-motion-2/);
+ assert.match(css,/\.marquee\[data-motion="on"\] \.marquee-track/);
+ assert.match(css,/\.marquee\[data-motion="off"\] \.marquee-track/);
+ assert.match(app,/santomen:marquee-motion/);
+ assert.match(app,/localStorage\.setItem\(key,saved\)/);
+ assert.match(app,/matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
 });
