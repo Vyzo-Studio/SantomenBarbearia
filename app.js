@@ -193,7 +193,7 @@
     const sectionIds=["servicos","agendar","localizacao"];
     const sections=sectionIds.map(id=>({id,element:document.getElementById(id),link:nav.querySelector('[data-mobile-target="'+id+'"]')}))
       .filter(item=>item.element&&item.link);
-    const links=$("a[data-mobile-target]",nav);
+    const links=[...nav.querySelectorAll("a[data-mobile-target]")];
     const editable='input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),textarea,select';
     let frame=0;
     function updateActive(){
