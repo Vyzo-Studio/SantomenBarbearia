@@ -14,8 +14,10 @@ window.SANTOMEN_CONFIG = Object.freeze({
   opening: "08:30",
   closing: "20:00",
   stepMinutes: 30,
-  supabaseUrl: "",
-  supabasePublishableKey: ""
+  // Public online bookings stay off until verified prices, staff and security controls.
+  enableOnlineBooking: false,
+  supabaseUrl: "https://pmhpgrdeknzbvegkrnxi.supabase.co",
+  supabasePublishableKey: "sb_publishable_pTdf3oXkrwazZbligXLmQg_OCc0TEyW"
 });
 window.SANTOMEN_DEFAULT_SERVICES = Object.freeze([
   {id:"corte",name:"Corte masculino",description:"Corte personalizado para o seu estilo.",category:"Cortes",price_cents:null,duration_minutes:null},
