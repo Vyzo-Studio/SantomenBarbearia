@@ -111,8 +111,8 @@ test("ticker stays animated without controls, regardless of motion preference",(
  assert.doesNotMatch(html,/marquee-motion-toggle|data-motion="auto"/);
  assert.doesNotMatch(css,/marquee-motion-toggle|\[data-motion=/);
  assert.doesNotMatch(app,/setupMarquee|santomen:marquee-motion/);
- assert.match(html,/style\.css\?v=marquee-always-3/);
- assert.match(html,/app\.js\?v=marquee-always-3/);
+ assert.match(html,/style\.css\?v=mobile-bottom-nav-1/);
+ assert.match(html,/app\.js\?v=mobile-bottom-nav-1/);
  assert.match(css,/\.marquee \.marquee-track\{animation:santomen-marquee 30s linear infinite!important/);
  assert.match(css,/animation-duration:30s!important;animation-play-state:running!important/);
  assert.doesNotMatch(css,/\.marquee-track\{animation:none/);
