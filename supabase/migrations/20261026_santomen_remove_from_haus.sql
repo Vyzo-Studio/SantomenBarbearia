@@ -38,4 +38,6 @@ drop table if exists public.santomen_barbers;
 drop table if exists public.santomen_media;
 drop table if exists public.santomen_settings;
 drop table if exists public.santomen_admins;
+drop function if exists santomen_private.is_slot_free(uuid,date,time without time zone,integer);
+drop function if exists santomen_private.is_admin();
 drop schema if exists santomen_private restrict;
