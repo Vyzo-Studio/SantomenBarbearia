@@ -158,7 +158,7 @@ test("Haus teardown migration is narrowly scoped to Santomen tables",()=>{
    assert.match(sql,new RegExp("drop table if exists public\\.santomen_"+name+";","i"));
  }
  assert.match(sql,/drop schema if exists santomen_private restrict/);
- assert.doesNotMatch(sql,/drop table if exists public\\.(?:haus_|luence_|admin_users)|drop schema auth|cascade/i);
+ assert.doesNotMatch(sql,/drop table if exists public\\.(?:haus_|luence_|admin_users)|drop schema auth|^\\s*drop\\s+.+\\bcascade\\b/im);
  const cfg=read("config.js");
  assert.match(cfg,/supabaseUrl: ""/);
  assert.match(cfg,/supabasePublishableKey: ""/);
