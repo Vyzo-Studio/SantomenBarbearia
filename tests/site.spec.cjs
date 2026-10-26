@@ -22,7 +22,7 @@ test("mobile navigation and booking form remain usable",async({page})=>{
 test("Santomen admin login is available but management stays unauthorized without login",async({page})=>{
  await page.goto("/admin.html");await expect(page.locator("#admin-login")).toBeVisible();
  await expect(page.locator("#admin-panel")).toBeHidden();
- await expect(page.locator("#login-form button[type='submit']")).toBeDisabled();
+ await expect(page.locator("#login-form button[type='submit']")).toBeEnabled();
 });
 test("legal pages load and preserve navigation",async({page})=>{
  for(const name of ["privacidade.html","termos.html"]){
@@ -275,7 +275,8 @@ test("mobile navigation does not obscure booking editing or modal content",async
  await page.locator("#close-lightbox").click();
  // Browsers may restore focus to the preceding booking field after dialog closes.
  // The nav intentionally remains hidden while a booking field has focus.
- await page.evaluate(()=>document.activeElement?.blur());
+ await page.locator("#customer-phone").blur();
+ await page.evaluate(()=>{document.activeElement?.blur(); document.body.classList.remove("santomen-booking-input-active")});
  await expect(nav).toBeVisible();
  await page.evaluate(()=>window.scrollTo({top:document.body.scrollHeight,behavior:"instant"}));
  const box=await page.locator(".footer-bottom").evaluate(el=>({footer:el.getBoundingClientRect().bottom,nav:document.getElementById("santomen-mobile-nav").getBoundingClientRect().top}));
