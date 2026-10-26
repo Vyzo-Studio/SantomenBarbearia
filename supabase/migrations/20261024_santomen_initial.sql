@@ -373,7 +373,7 @@ grant execute on function public.santomen_admin_refund(uuid,integer,text) to aut
 -- appointments completed. Past completed bookings remain immutable.
 create or replace function public.santomen_admin_set_booking_status(
   p_booking_id uuid, p_status text)
-returns void language plpgsql security definer set search_path='' as $
+returns void language plpgsql security definer set search_path='' as $$
 declare v_booking public.santomen_bookings%rowtype;
 begin
  if not santomen_private.is_admin() then raise exception 'Não autorizado';end if;
@@ -387,7 +387,7 @@ begin
   raise exception 'Existe pagamento; a alteração exige conciliação financeira';
  end if;
  update public.santomen_bookings set status=p_status, updated_at=now() where id=p_booking_id;
-end $;
+end $$;
 revoke all on function public.santomen_admin_set_booking_status(uuid,text) from public;
 grant execute on function public.santomen_admin_set_booking_status(uuid,text) to authenticated;
 
