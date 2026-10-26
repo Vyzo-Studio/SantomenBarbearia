@@ -8,7 +8,7 @@ window.SANTOMEN_CONFIG = Object.freeze({
   name: "Santomen Barbearia",
   phone: "5561992232839",
   instagram: "https://www.instagram.com/santomenbarbearia/",
-  address: "QNM 20, Conjunto A, Lote 45 — Ceilândia, Brasília/DF",
+  address: "St. M QNM 20, Loja 02 — Ceilândia, Brasília/DF, 72210-201",
   timezone: "America/Sao_Paulo",
   businessDays: [1,2,3,4,5,6],
   opening: "08:30",
