@@ -14,7 +14,7 @@ create table if not exists public.santomen_admins (
 create table if not exists public.santomen_settings (
   id integer primary key default 1 check (id=1),
   name text not null default 'Santomen Barbearia',
-  address text not null default 'QNM 20, Conjunto A, Lote 45 — Ceilândia, Brasília/DF',
+  address text not null default 'St. M QNM 20, Loja 02 — Ceilândia, Brasília/DF, 72210-201',
   whatsapp text not null default '5561992232839',
   opening time not null default '08:30',
   closing time not null default '20:00',
