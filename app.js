@@ -36,7 +36,7 @@
     const root=$("#service-list"),select=$("#service");if(!root||!select)return;
     root.replaceChildren();select.replaceChildren(new Option("Selecione seu serviço",""));
     for(const [i,s] of state.services.filter(s=>s.active!==false).entries()){
-      const article=make("article","service-card");article.append(make("div","service-index",String(i+1).padStart(2,"0")),make("div","service-symbol",["✂","◈","★","✳"][i%4]),make("h3","",s.name),make("p","",s.description||"Atendimento Santomen"));
+      const article=make("article","service-card");article.append(make("div","service-symbol",["✂","◈","★","✳"][i%4]),make("h3","",s.name),make("p","",s.description||"Atendimento Santomen"));
       const footer=make("div","service-footer"),price=make("span","",Number.isInteger(s.price_cents)?money(s.price_cents):"Consulte o valor");
       const a=make("a","","↗");a.href="#agendar";a.setAttribute("aria-label","Consultar "+s.name);a.addEventListener("click",()=>{select.value=String(s.id);updateAvailability()});
       footer.append(price,a);article.append(footer);root.append(article);
