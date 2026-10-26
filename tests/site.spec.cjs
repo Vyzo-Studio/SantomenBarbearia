@@ -70,3 +70,94 @@ test("real shop photos load in landscape format on desktop and mobile",async({pa
   }
  }
 });
+
+test("language menu is readable and selectable by mouse and keyboard on mobile and desktop",async({page})=>{
+ for(const width of [320,390,1366]){
+  await page.setViewportSize({width,height:850});
+  await page.goto("/");
+  const trigger=page.locator("#language-trigger"),menu=page.locator("#language-menu");
+  await trigger.click();await expect(menu).toBeVisible();
+  await expect(menu.locator('[role="menuitemradio"]')).toHaveCount(5);
+  const geometry=await menu.evaluate(el=>{
+   const rect=el.getBoundingClientRect();
+   const item=el.querySelector(".language-option");
+   const style=getComputedStyle(item);
+   return {left:rect.left,right:rect.right,width:innerWidth,color:style.color,bg:style.backgroundColor};
+  });
+  expect(geometry.left).toBeGreaterThanOrEqual(0);
+  expect(geometry.right).toBeLessThanOrEqual(geometry.width+1);
+  expect(geometry.color).not.toBe(geometry.bg);
+  await page.getByRole("menuitemradio",{name:/English/}).click();
+  await expect(page.locator("html")).toHaveAttribute("lang","en");
+  await expect(trigger).toContainText("EN");
+  await expect(menu).toBeHidden();
+  await page.reload();
+  await expect(trigger).toContainText("EN");
+  await trigger.focus();await page.keyboard.press("ArrowDown");
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("html")).toHaveAttribute("lang","de");
+  await trigger.click();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(trigger).toBeFocused();
+ }
+});
+test("each of the five languages remains selectable",async({page})=>{
+ await page.goto("/");
+ const expected=[["pt","pt-BR","PT"],["en","en","EN"],["es","es","ES"],["ja","ja","JA"],["de","de","DE"]];
+ for(const [code,locale,label] of expected){
+   await page.locator("#language-trigger").click();
+   await page.locator('[data-language="'+code+'"]').click();
+   await expect(page.locator("html")).toHaveAttribute("lang",locale);
+   await expect(page.locator("#language-trigger")).toContainText(label);
+   await expect(page.locator('[data-language="'+code+'"]')).toHaveAttribute("aria-checked","true");
+ }
+});
+test("numbered decoration and admin shortcut are absent while form remains functional",async({page})=>{
+ await page.goto("/");
+ expect(await page.locator(".section-tag").allTextContents()).toHaveLength(7);
+ for(const value of await page.locator(".section-tag").allTextContents())expect(value).not.toMatch(/0[1-9]\s*\//);
+ await expect(page.getByRole("link",{name:"ÁREA ADMINISTRATIVA"})).toHaveCount(0);
+ await expect(page.locator('a[href="admin.html"]')).toHaveCount(0);
+ await expect(page.locator("#service-list .service-index")).toHaveCount(0);
+ await expect(page.locator("#booking-form")).toBeVisible();
+ await expect(page.locator("#privacy-ack")).not.toBeChecked();
+ await page.goto("/admin.html");
+ await expect(page.locator("#admin-panel")).toBeHidden();
+ await expect(page.locator("#login-form button[type=submit]")).toBeDisabled();
+});
+test("the marquee advances, has identical adjacent tracks, and supports reduced motion",async({page})=>{
+ await page.emulateMedia({reducedMotion:"no-preference"});
+ await page.setViewportSize({width:1366,height:900});
+ await page.goto("/");
+ await page.evaluate(()=>document.fonts.ready);
+ const track=page.locator(".marquee-track"),groups=page.locator(".marquee-group");
+ await expect(groups).toHaveCount(2);
+ const initial=await track.evaluate(el=>getComputedStyle(el).transform);
+ await page.waitForTimeout(500);
+ const after=await track.evaluate(el=>getComputedStyle(el).transform);
+ expect(initial).not.toBe(after);
+ const seam=await page.evaluate(()=>{
+  const first=document.querySelectorAll(".marquee-group");
+  const a=first[0].getBoundingClientRect(),b=first[1].getBoundingClientRect();
+  return {first:a.width,second:b.width,delta:b.left-a.right,document:document.documentElement.scrollWidth,viewport:innerWidth};
+ });
+ expect(Math.abs(seam.first-seam.second)).toBeLessThan(1);
+ expect(Math.abs(seam.delta)).toBeLessThan(1);
+ expect(seam.document).toBeLessThanOrEqual(seam.viewport+1);
+ await page.emulateMedia({reducedMotion:"reduce"});
+ await expect(track).toHaveCSS("animation-name","none");
+});
+test("marquee and menu do not cause horizontal overflow",async({page})=>{
+ await page.emulateMedia({reducedMotion:"no-preference"});
+ for(const width of [320,375,390,430,768,1024,1366,1920,2560]){
+  await page.setViewportSize({width,height:850});
+  await page.goto("/");
+  await page.locator("#language-trigger").click();
+  const dims=await page.evaluate(()=>({body:document.body.scrollWidth,document:document.documentElement.scrollWidth,viewport:innerWidth}));
+  expect(dims.body).toBeLessThanOrEqual(dims.viewport+1);
+  expect(dims.document).toBeLessThanOrEqual(dims.viewport+1);
+ }
+});
