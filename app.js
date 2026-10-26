@@ -186,6 +186,47 @@
       finally{button.disabled=false;button.textContent=original}
     });
   }
+  // The system's reduced-motion preference is respected by default, but visitors
+  // may explicitly opt into the animated ticker. Their choice stays on this device.
+  function setupMarquee(){
+    const strip=$("#santomen-marquee"),button=$("#marquee-motion-toggle");
+    if(!strip||!button)return;
+    const key="santomen:marquee-motion";
+    const reduced=window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    let saved=null;
+    try{const value=localStorage.getItem(key);if(value==="on"||value==="off")saved=value}catch{}
+    const captions={
+      pt:{on:"Pausar movimento da faixa",off:"Ativar movimento da faixa"},
+      en:{on:"Pause the moving banner",off:"Play the moving banner"},
+      es:{on:"Pausar el movimiento de la franja",off:"Activar el movimiento de la franja"},
+      ja:{on:"バナーの動きを停止",off:"バナーを動かす"},
+      de:{on:"Laufband anhalten",off:"Laufband starten"}
+    };
+    const desired=()=>saved||(reduced&&reduced.matches?"off":"on");
+    function render(){
+      const next=desired();
+      // Do not restart the CSS animation on unrelated interface updates.
+      if(strip.dataset.motion!==next)strip.dataset.motion=next;
+      const action=next==="on"?"on":"off";
+      const locale=(window.SANTOMEN_I18N&&window.SANTOMEN_I18N.language)||"pt";
+      const label=(captions[locale]||captions.pt)[action];
+      button.setAttribute("aria-label",label);
+      button.setAttribute("title",label);
+      button.setAttribute("aria-pressed",String(next==="on"));
+      button.querySelector("span").textContent=next==="on"?"Ⅱ":"▶";
+    }
+    button.addEventListener("click",()=>{
+      saved=desired()==="on"?"off":"on";
+      try{localStorage.setItem(key,saved)}catch{}
+      render();
+    });
+    if(reduced){
+      if(typeof reduced.addEventListener==="function")reduced.addEventListener("change",render);
+      else if(typeof reduced.addListener==="function")reduced.addListener(render);
+    }
+    document.addEventListener("santomen:language",render);
+    render();
+  }
   function setupNavigation(){
     $("#year").textContent=String(new Date().getFullYear());
     const toggle=$("#menu-toggle"), menu=$("#nav-menu");
@@ -194,7 +235,7 @@
     document.addEventListener("keydown",ev=>{if(ev.key==="Escape"){menu.classList.remove("open");toggle.setAttribute("aria-expanded","false")}});
   }
   function setup(){
-    setupNavigation();renderServices();renderBarbers();setupForm();loadCatalog();
+    setupNavigation();setupMarquee();renderServices();renderBarbers();setupForm();loadCatalog();
     document.addEventListener("santomen:language",()=>{renderServices();renderBarbers()});
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup,{once:true});else setup();
