@@ -14,7 +14,7 @@ test("essential static assets exist and local document links resolve",()=>{
 });
 test("contact and client data boundaries",()=>{
  const config=read("config.js"), app=read("app.js"),admin=read("admin.js");
- assert.match(config,/5561992232839/);assert.match(config,/supabaseUrl: ""/);
+ assert.match(config,/5561992232839/);assert.match(config,/supabaseUrl: "https:\/\/[a-z0-9-]+\.supabase\.co"/);
  assert.doesNotMatch(config,/^\s*(?:service_role|secretKey|password)\s*[:=]/im);
  assert.match(app,/state\.livePhone/);assert.match(app,/a combinar pelo WhatsApp/i);
  assert.match(admin,/santomen_admins/);assert.match(admin,/signInWithPassword/);
@@ -101,8 +101,8 @@ test("admin route is not security by obscurity; Supabase integration remains fai
  assert.match(admin,/if\(!configured\)/);
  assert.match(sql,/santomen_private\.is_admin\(\)/);
  assert.match(sql,/enable row level security/i);
- assert.match(config,/supabaseUrl: ""/);
- assert.match(config,/supabasePublishableKey: ""/);
+ assert.match(config,/supabaseUrl: "https:\/\/[a-z0-9-]+\.supabase\.co"/);
+ assert.match(config,/supabasePublishableKey: "sb_publishable_[^"]+"/);
 });
 
 
@@ -139,4 +139,15 @@ test("Santomen mobile navigation has four branded, functional and accessible act
  assert.match(app,/IntersectionObserver/);
  assert.match(app,/scrollIntoView\(/);
  assert.doesNotMatch(block[0],/https:\/\/www\.google\.com\/maps/);
+});
+
+test("shared Supabase uses Santomen role separation and gated public booking",()=>{
+ const cfg=read("config.js"),app=read("app.js"),html=read("index.html"),admin=read("admin.html");
+ assert.match(cfg,/enableOnlineBooking: false/);
+ assert.match(app,/cfg\.enableOnlineBooking===true/);
+ assert.match(html,/config\.js\?v=santomen-shared-1/);
+ assert.match(admin,/config\.js\?v=santomen-shared-1/);
+ assert.match(admin,/admin\.js\?v=santomen-shared-1/);
+ assert.match(read("supabase/migrations/20261026_santomen_public_booking_gate.sql"),/revoke execute on function public\.santomen_request_booking/);
+ assert.doesNotMatch(cfg,/sb_secret_|service_role\s*:/);
 });
