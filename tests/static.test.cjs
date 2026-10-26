@@ -6,8 +6,10 @@ test("frontend JavaScript parses",()=>{
 });
 test("essential static assets exist and local document links resolve",()=>{
  const html=read("index.html");assert.match(html,/<html lang="pt-BR">/);
- assert.match(html,/id="booking-form"/);assert.match(html,/id="media-lightbox"/);
- for(const p of ["assets/logo-santomen.webp","style.css","app.js","config.js","i18n.js","admin.css","admin.js","privacidade.html","termos.html"])assert.ok(fs.existsSync(path.join(root,p)),p);
+ assert.match(html,/id="booking-form"/);
+ assert.match(html,/assets\/logo-santomen-hero\.webp/);
+ assert.match(read("style.css"),/\.hero-mark img\{[^}]*height:auto;aspect-ratio:1 \/ 1;object-fit:contain/);assert.match(html,/id="media-lightbox"/);
+ for(const p of ["assets/logo-santomen.webp","assets/logo-santomen-hero.webp","style.css","app.js","config.js","i18n.js","admin.css","admin.js","privacidade.html","termos.html"])assert.ok(fs.existsSync(path.join(root,p)),p);
  assert.match(read("admin.html"),/id="admin-login"/);assert.match(read("admin.html"),/id="admin-panel"/);
 });
 test("contact and client data boundaries",()=>{
