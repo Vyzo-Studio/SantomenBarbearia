@@ -4,7 +4,7 @@
   const cfg=window.SANTOMEN_CONFIG||{};
   const $=(q,root=document)=>root.querySelector(q);
   const $$=(q,root=document)=>[...root.querySelectorAll(q)];
-  const backend=Boolean(/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||"") && /^sb_publishable_/.test(cfg.supabasePublishableKey||""));
+  const backend=Boolean(cfg.enableOnlineBooking===true && /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||"") && /^sb_publishable_/.test(cfg.supabasePublishableKey||""));
   const copy=()=>window.SANTOMEN_I18N;
   const memoryKey="santomen:booking-contact:v1";
   const state={services:[...(window.SANTOMEN_DEFAULT_SERVICES||[])],barbers:[],media:[],livePhone:null,requestId:0};
