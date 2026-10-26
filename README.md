@@ -1,50 +1,42 @@
 # Santomen Barbearia — VYZO Studio
 
-**Situação: website e painel administrativo implementados em código; ambiente de produção e backend exclusivo ainda não provisionados.**
+## Status da integração (26/10/2026)
 
-Este projeto é independente das outras marcas do estúdio. A GNG Barbearia foi consultada apenas como referência de lógica técnica; nenhum dado, credencial, cliente, pagamento, fotografia ou banco é compartilhado.
+**Backend do painel conectado ao projeto Supabase existente da HAUS Barber, com isolamento lógico por prefixos, políticas RLS e autorização administrativa independente.**
 
-## Informações de referência
+A opção de usar um projeto compartilhado foi escolhida pelo responsável. Isso **não é isolamento físico**: o mesmo projeto compartilha infraestrutura, cotas, sistema Supabase Auth e acesso de proprietários do projeto. As tabelas e operações da Santomen não utilizam os cadastros das outras barbearias.
 
-- Identidade baseada no logotipo oficial enviado: preto, branco, cinza e amarelo.
-- Instagram: https://www.instagram.com/santomenbarbearia/
-- WhatsApp fornecido: +55 61 99223-2839.
-- Endereço indicado no Instagram: QNM 20, Conjunto A, Lote 45 — Ceilândia/DF.
-- Horário indicado: segunda a sábado, 08h30–20h.
-- Serviços de referência: corte masculino, barba e corte infantil.
+- Site: https://vyzo-studio.github.io/SantomenBarbearia/
+- Painel: https://vyzo-studio.github.io/SantomenBarbearia/admin.html
+- Projeto Supabase: Haus_Barber (ID `pmhpgrdeknzbvegkrnxi`), organização `Vyzo_std`
+- Banco Santomen: 11 tabelas `public.santomen_*` com Row Level Security; funções `santomen_*` e esquema privado `santomen_private`
+- Autenticação: Supabase Auth compartilhado, mas autorização da Santomen exige UID explicitamente inserido em `santomen_admins`.
+- **Ainda não foi criada/vinculada conta administradora Santomen**; ninguém recebeu acesso por herdar permissões da HAUS.
+- **Ainda não há preços, serviços e profissionais registrados** no banco Santomen.
+- Site público continua em modo **consulta de agenda pelo WhatsApp**. `enableOnlineBooking: false` desativa as chamadas de reserva no navegador, e a migração adicional revoga a execução pública das funções de agendamento.
+- A configuração frontend usa somente chave pública `sb_publishable_...`. **Nunca** publicar uma chave secreta nem credenciais pessoais.
 
-**Endereço, horários, preços, durações e equipe devem ser confirmados com o responsável.** Não publicar fotografias de clientes sem autorização adequada.
+## Migrações
 
-## Componentes criados
+1. `supabase/migrations/20261024_santomen_initial.sql`: cria somente tabelas, funções e políticas da Santomen.
+2. `supabase/migrations/20261026_santomen_public_booking_gate.sql`: revoga temporariamente acesso público às funções de catálogo, disponibilidade e solicitação de reserva, até homologação.
 
-- Site público: index.html, style.css, app.js, config.js e i18n.js.
-- Logotipo: assets/logo-santomen.webp, imagem oficial fornecida.
-- Painel administrativo: admin.html, admin.css e admin.js.
-- SQL de instalação preparado: supabase/migrations/20261024_santomen_initial.sql.
-- Termos e privacidade preliminares: termos.html, privacidade.html.
-- Qualidade: tests/, playwright.config.cjs, package.json e fluxos em .github/workflows/.
+Ambas aplicadas no projeto Supabase da HAUS; sem alterações deliberadas em tabelas existentes de HAUS ou Luence.
 
-### Comportamento atual
+## Etapas pendentes
 
-**Sem backend:** o formulário prepara uma consulta de horário pelo WhatsApp, sem dizer que houve reserva. O login administrativo permanece bloqueado para não simular autenticação ou transações. Valores desconhecidos aparecem como 'Consulte o valor'.
-
-**Backend futuro:** as funções SQL e chamadas JS em código foram preparadas para agendamentos e um painel independente, mas não foram implantadas ou homologadas em um banco Santomen. Não tratar painel, pagamentos e agenda online como operacionais até testes reais.
-
-**Idiomas:** cinco traduções para partes importantes da interface, ainda sem cobertura completa de conteúdo e documentos legais.
-
-## Implantação segura — ainda pendente
-
-1. Criar projeto Supabase **exclusivo** da Santomen, após confirmação de organização e possível custo.
-2. Revisar e aplicar a migração SQL nesse projeto novo (jamais no banco GNG ou HAUS), testar RLS e concorrência.
-3. Criar usuário administrador no Supabase Auth e vincular o UUID em santomen_admins com acesso mínimo; nunca salvar senhas/secret keys em código público.
-4. Definir preços/durações reais, profissionais, horários, fotografias com autorização e textos legais aprovados.
-5. Preencher **somente** as chaves públicas próprias do projeto em config.js; nunca colocar service-role ou credenciais secretas.
-6. Testar autenticação real, reserva simultânea, bloqueios, atualização de horários, pagamentos combinados, estornos, conciliação, falhas e regressões.
-7. Habilitar GitHub Pages em **Settings → Pages → Build and deployment → Source: GitHub Actions**. A automação não dispõe de token administrativo para habilitar Pages pela primeira vez.
-8. Validar site publicado antes de anunciar agendamentos online e gestão financeira completos.
+1. Definir o e-mail que administrará a Santomen. Criar a conta com senha definida pelo responsável (ou vincular uma conta existente por autorização explícita).
+2. Cadastrar o UID de Auth na tabela `santomen_admins`, sem conceder acesso geral ao banco.
+3. Testar login real e operações: serviços, profissionais, bloqueios, agenda, lançamentos, caixa, pagamentos, estornos e histórico. Testar usuário sem permissão.
+4. Cadastrar serviços, valores, duração e colaboradores reais; confirmar política de tratamento de dados e autorização de fotografias.
+5. Validar disponibilidade, concorrência, proteção contra abuso, expiração de solicitações e taxas/quotas compartilhadas.
+6. Liberar RPCs públicas apenas por migração revisada e definir `enableOnlineBooking: true` somente após aprovação.
+7. Se a venda exigir infraestrutura exclusiva em nome do cliente, migrar posteriormente a Santomen para um projeto Supabase próprio.
 
 ## Testes
 
-Com Node.js 22+ instalado, use: npm install, npm run check, npx playwright install chromium e npm run test:browser.
+`npm install && npm run check` e `npx playwright install chromium && npm run test:browser`.
 
-Confirme o status das execuções em https://github.com/Vyzo-Studio/SantomenBarbearia/actions. Testes estáticos e de navegador não garantem funcionamento do backend ainda não provisionado.
+Verifique os resultados reais em https://github.com/Vyzo-Studio/SantomenBarbearia/actions.
+
+**Limites de segurança:** RLS e políticas impedem os papéis comuns de misturar tabelas. Proprietários e operadores privilegiados do projeto Supabase compartilhado continuam podendo acessar os dados de todas as marcas.
