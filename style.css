@@ -99,7 +99,7 @@
 @media(max-width:767px){
   html{scroll-padding-top:90px;scroll-padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
   body{padding-bottom:calc(102px + env(safe-area-inset-bottom,0px))}
-  #servicos,#agendar,#localizacao,.booking-card{scroll-margin-top:90px}
+  #servicos,#agendar,#localizacao,.booking-card{scroll-margin-top:0}
   .santomen-mobile-nav{
     position:fixed;
     inset-inline:0;
