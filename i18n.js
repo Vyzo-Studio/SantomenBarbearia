@@ -10,7 +10,13 @@ function saved(){try{return localStorage.getItem(storageKey)||"pt"}catch{return 
 let active=dict[saved()]?saved():"pt";
 function setLanguage(code,save){
   active=dict[code]?code:"pt"; document.documentElement.lang=({pt:"pt-BR",en:"en",es:"es",ja:"ja",de:"de"})[active];
-  const lang=document.getElementById("language"); if(lang)lang.value=active;
+  const trigger=document.getElementById("language-trigger"),current=document.getElementById("language-current");
+  if(current)current.textContent=({pt:"PT",en:"EN",es:"ES",ja:"JA",de:"DE"})[active];
+  if(trigger)trigger.setAttribute("aria-label","Idioma atual: "+({pt:"Português (Brasil)",en:"English",es:"Español",ja:"日本語",de:"Deutsch"})[active]+". Alterar idioma");
+  document.querySelectorAll("#language-menu .language-option").forEach(option=>{
+    const selected=option.dataset.language===active;
+    option.setAttribute("aria-checked",String(selected));
+  });
   document.querySelectorAll("[data-i18n]").forEach(el=>{
     const key=el.dataset.i18n, s=(dict[active]&&dict[active][key])||pt[key];if(!s)return;
     // Preserve the editorial accent by keeping the final phrase in the highlighted span.
@@ -21,5 +27,46 @@ function setLanguage(code,save){
   document.dispatchEvent(new CustomEvent("santomen:language",{detail:{language:active}}));
 }
 window.SANTOMEN_I18N={get language(){return active},t:(key)=>((dict[active]||pt)[key]||pt[key]||key),setLanguage,dict};
-document.addEventListener("DOMContentLoaded",()=>{setLanguage(active,false);const select=document.getElementById("language");select?.addEventListener("change",()=>setLanguage(select.value,true));});
+document.addEventListener("DOMContentLoaded",()=>{
+  setLanguage(active,false);
+  const root=document.getElementById("language-switcher"),trigger=document.getElementById("language-trigger"),menu=document.getElementById("language-menu");
+  if(!root||!trigger||!menu)return;
+  const options=[...menu.querySelectorAll(".language-option")];
+  const selectedIndex=()=>Math.max(0,options.findIndex(option=>option.dataset.language===active));
+  const close=(focusTrigger=false)=>{
+    if(menu.hidden)return;
+    menu.hidden=true;trigger.setAttribute("aria-expanded","false");
+    if(focusTrigger)trigger.focus();
+  };
+  const open=()=>{
+    menu.hidden=false;trigger.setAttribute("aria-expanded","true");
+    options[selectedIndex()].focus();
+  };
+  trigger.addEventListener("click",()=>menu.hidden?open():close(true));
+  trigger.addEventListener("keydown",event=>{
+    if(event.key==="ArrowDown"||event.key==="ArrowUp"){
+      event.preventDefault();open();
+      if(event.key==="ArrowUp")options.at(-1).focus();
+    }
+  });
+  menu.addEventListener("click",event=>{
+    const option=event.target.closest(".language-option");
+    if(!option||!menu.contains(option))return;
+    setLanguage(option.dataset.language,true);close(true);
+  });
+  menu.addEventListener("keydown",event=>{
+    const currentIndex=Math.max(0,options.indexOf(document.activeElement));
+    if(event.key==="Escape"){event.preventDefault();close(true);return}
+    if(event.key==="Tab"){close();return}
+    let next;
+    if(event.key==="ArrowDown")next=(currentIndex+1)%options.length;
+    else if(event.key==="ArrowUp")next=(currentIndex-1+options.length)%options.length;
+    else if(event.key==="Home")next=0;
+    else if(event.key==="End")next=options.length-1;
+    if(next!==undefined){event.preventDefault();options[next].focus()}
+  });
+  document.addEventListener("pointerdown",event=>{if(!root.contains(event.target))close()});
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!menu.hidden){event.preventDefault();close(true)}});
+  root.addEventListener("focusout",event=>{if(!root.contains(event.relatedTarget))close()});
+});
 })();
