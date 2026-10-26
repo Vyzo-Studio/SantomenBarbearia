@@ -161,3 +161,43 @@ test("marquee and menu do not cause horizontal overflow",async({page})=>{
   expect(dims.document).toBeLessThanOrEqual(dims.viewport+1);
  }
 });
+
+test("visitor can enable animation even with reduced motion active and it persists",async({page})=>{
+ await page.emulateMedia({reducedMotion:"reduce"});
+ await page.goto("/");
+ const ticker=page.locator(".marquee-track"),button=page.locator("#marquee-motion-toggle");
+ await expect(ticker).toHaveCSS("animation-name","none");
+ await expect(button).toHaveAttribute("aria-pressed","false");
+ await expect(button).toHaveAttribute("aria-label","Ativar movimento da faixa");
+ await button.click();
+ await expect(ticker).toHaveCSS("animation-name","santomen-marquee");
+ await expect(button).toHaveAttribute("aria-pressed","true");
+ const before=await ticker.evaluate(el=>getComputedStyle(el).transform);
+ await page.waitForTimeout(350);
+ const after=await ticker.evaluate(el=>getComputedStyle(el).transform);
+ expect(before).not.toBe(after);
+ await page.reload();
+ await expect(button).toHaveAttribute("aria-pressed","true");
+ await expect(ticker).toHaveCSS("animation-name","santomen-marquee");
+ await button.click();
+ await expect(ticker).toHaveCSS("animation-name","none");
+ await expect(button).toHaveAttribute("aria-pressed","false");
+});
+test("normal-motion banner moves, can be paused and does not restart on language switch",async({page})=>{
+ await page.emulateMedia({reducedMotion:"no-preference"});
+ await page.goto("/");
+ const ticker=page.locator(".marquee-track"),button=page.locator("#marquee-motion-toggle");
+ await expect(ticker).toHaveCSS("animation-name","santomen-marquee");
+ await expect(button).toHaveAttribute("aria-pressed","true");
+ const before=await ticker.evaluate(el=>getComputedStyle(el).transform);
+ await page.waitForTimeout(300);
+ const after=await ticker.evaluate(el=>getComputedStyle(el).transform);
+ expect(before).not.toBe(after);
+ await page.locator("#language-trigger").click();
+ await page.locator('[data-language="en"]').click();
+ await expect(button).toHaveAttribute("aria-label","Pause the moving banner");
+ await expect(ticker).toHaveCSS("animation-name","santomen-marquee");
+ await button.click();
+ await expect(ticker).toHaveCSS("animation-name","none");
+ await expect(button).toHaveAttribute("aria-label","Play the moving banner");
+});
