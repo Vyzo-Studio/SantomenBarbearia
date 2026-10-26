@@ -1,8 +1,6 @@
-/**
- * Santomen Barbearia — isolated public configuration.
- * NEVER insert secret/service_role keys here.
- * Online appointment writes and admin sign-in are enabled only after an independent
- * Santomen Supabase project and SQL migrations have been deployed and verified.
+/** Santomen public configuration — no backend linked. 
+ * Owner requested removal from the HAUS shared Supabase project on 2026-10-26.
+ * Public scheduling stays via WhatsApp; admin panel is disabled.
  */
 window.SANTOMEN_CONFIG = Object.freeze({
   name: "Santomen Barbearia",
@@ -16,8 +14,8 @@ window.SANTOMEN_CONFIG = Object.freeze({
   stepMinutes: 30,
   // Public online bookings stay off until verified prices, staff and security controls.
   enableOnlineBooking: false,
-  supabaseUrl: "https://pmhpgrdeknzbvegkrnxi.supabase.co",
-  supabasePublishableKey: "sb_publishable_pTdf3oXkrwazZbligXLmQg_OCc0TEyW"
+  supabaseUrl: "",
+  supabasePublishableKey: ""
 });
 window.SANTOMEN_DEFAULT_SERVICES = Object.freeze([
   {id:"corte",name:"Corte masculino",description:"Corte personalizado para o seu estilo.",category:"Cortes",price_cents:null,duration_minutes:null},

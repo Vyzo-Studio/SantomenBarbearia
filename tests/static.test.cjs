@@ -14,7 +14,7 @@ test("essential static assets exist and local document links resolve",()=>{
 });
 test("contact and client data boundaries",()=>{
  const config=read("config.js"), app=read("app.js"),admin=read("admin.js");
- assert.match(config,/5561992232839/);assert.match(config,/supabaseUrl: "https:\/\/[a-z0-9-]+\.supabase\.co"/);
+ assert.match(config,/5561992232839/);assert.match(config,/supabaseUrl: ""/);
  assert.doesNotMatch(config,/^\s*(?:service_role|secretKey|password)\s*[:=]/im);
  assert.match(app,/state\.livePhone/);assert.match(app,/a combinar pelo WhatsApp/i);
  assert.match(admin,/santomen_admins/);assert.match(admin,/signInWithPassword/);
@@ -101,8 +101,8 @@ test("admin route is not security by obscurity; Supabase integration remains fai
  assert.match(admin,/if\(!configured\)/);
  assert.match(sql,/santomen_private\.is_admin\(\)/);
  assert.match(sql,/enable row level security/i);
- assert.match(config,/supabaseUrl: "https:\/\/[a-z0-9-]+\.supabase\.co"/);
- assert.match(config,/supabasePublishableKey: "sb_publishable_[^"]+"/);
+ assert.match(config,/supabaseUrl: ""/);
+ assert.match(config,/supabasePublishableKey: ""/);
 });
 
 
@@ -112,7 +112,7 @@ test("ticker stays animated without controls, regardless of motion preference",(
  assert.doesNotMatch(css,/marquee-motion-toggle|\[data-motion=/);
  assert.doesNotMatch(app,/setupMarquee|santomen:marquee-motion/);
  assert.match(html,/style\.css\?v=mobile-bottom-nav-2/);
- assert.match(html,/app\.js\?v=santomen-shared-1/);
+ assert.match(html,/app\.js\?v=santomen-detached-1/);
  assert.match(css,/\.marquee \.marquee-track\{animation:santomen-marquee 30s linear infinite!important/);
  assert.match(css,/animation-duration:30s!important;animation-play-state:running!important/);
  assert.doesNotMatch(css,/\.marquee-track\{animation:none/);
@@ -141,13 +141,26 @@ test("Santomen mobile navigation has four branded, functional and accessible act
  assert.doesNotMatch(block[0],/https:\/\/www\.google\.com\/maps/);
 });
 
-test("shared Supabase uses Santomen role separation and gated public booking",()=>{
+test("Santomen has no shared Supabase integration and remains in WhatsApp mode",()=>{
  const cfg=read("config.js"),app=read("app.js"),html=read("index.html"),admin=read("admin.html");
  assert.match(cfg,/enableOnlineBooking: false/);
  assert.match(app,/cfg\.enableOnlineBooking===true/);
- assert.match(html,/config\.js\?v=santomen-shared-1/);
- assert.match(admin,/config\.js\?v=santomen-shared-1/);
- assert.match(admin,/admin\.js\?v=santomen-shared-1/);
+ assert.match(html,/config\.js\?v=santomen-detached-1/);
+ assert.match(admin,/config\.js\?v=santomen-detached-1/);
+ assert.match(admin,/admin\.js\?v=santomen-detached-1/);
  assert.match(read("supabase/migrations/20261026_santomen_public_booking_gate.sql"),/revoke execute on function public\.santomen_request_booking/);
  assert.doesNotMatch(cfg,/sb_secret_|service_role\s*:/);
+});
+
+test("Haus teardown migration is narrowly scoped to Santomen tables",()=>{
+ const sql=read("supabase/migrations/20261026_santomen_remove_from_haus.sql");
+ for(const name of ["admins","settings","services","barbers","blocks","bookings","cash_sessions","payments","payment_allocations","refunds","media"]){
+   assert.match(sql,new RegExp("drop table if exists public\\.santomen_"+name+";","i"));
+ }
+ assert.match(sql,/drop schema if exists santomen_private restrict/);
+ assert.doesNotMatch(sql,/drop table if exists public\\.(?:haus_|luence_|admin_users)|drop schema auth|cascade/i);
+ const cfg=read("config.js");
+ assert.match(cfg,/supabaseUrl: ""/);
+ assert.match(cfg,/supabasePublishableKey: ""/);
+ assert.doesNotMatch(cfg,/pmhpgrdeknzbvegkrnxi|sb_publishable_[A-Za-z0-9]/);
 });
