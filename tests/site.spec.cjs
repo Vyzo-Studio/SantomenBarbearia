@@ -19,7 +19,7 @@ test("mobile navigation and booking form remain usable",async({page})=>{
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);
  expect(overflow).toBe(false);
 });
-test("Santomen admin login stays disabled without a backend",async({page})=>{
+test("Santomen admin login is available but management stays unauthorized without login",async({page})=>{
  await page.goto("/admin.html");await expect(page.locator("#admin-login")).toBeVisible();
  await expect(page.locator("#admin-panel")).toBeHidden();
  await expect(page.locator("#login-form button[type='submit']")).toBeDisabled();
@@ -125,7 +125,7 @@ test("numbered decoration and admin shortcut are absent while form remains funct
  await expect(page.locator("#privacy-ack")).not.toBeChecked();
  await page.goto("/admin.html");
  await expect(page.locator("#admin-panel")).toBeHidden();
- await expect(page.locator("#login-form button[type=submit]")).toBeDisabled();
+ await expect(page.locator("#login-form button[type=submit]")).toBeEnabled();
 });
 test("the marquee advances with identical tracks even under reduced-motion preference",async({page})=>{
  await page.emulateMedia({reducedMotion:"no-preference"});
