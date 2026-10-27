@@ -309,7 +309,8 @@ test("Santomen calendar selects dates without the native browser picker",async({
  await page.setViewportSize({width:390,height:850});
  await page.goto("/admin.html");
  await page.evaluate(()=>{document.querySelector("#admin-login").hidden=true;document.querySelector("#admin-panel").hidden=false});
- await page.locator('#admin-tabs [data-tab="bookings"]').click();
+ // Reveal the protected calendar for an isolated component test; no credentials or backend data are mocked.
+ await page.evaluate(()=>{document.querySelector('[data-panel="dashboard"]').hidden=true;document.querySelector('[data-panel="bookings"]').hidden=false});
  await expect(page.locator('[data-panel="bookings"]')).toBeVisible();
  const calendar=page.locator("#santomen-inline-calendar");
  await expect(calendar.locator(".smcal-day")).toHaveCount(31);
@@ -317,7 +318,7 @@ test("Santomen calendar selects dates without the native browser picker",async({
  await expect(page.locator("#filter-date")).toHaveValue("2026-10-15");
  await calendar.locator('[data-smcal-shift="1"]').click();
  await expect(calendar).toContainText("NOVEMBRO");
- await page.locator('#admin-tabs [data-tab="manual"]').click();
+ await page.evaluate(()=>{document.querySelector('[data-panel="bookings"]').hidden=true;document.querySelector('[data-panel="manual"]').hidden=false});
  await page.locator("#manual-form .smcal-field-trigger").click();
  const dialog=page.locator(".smcal-dialog");
  await expect(dialog).toBeVisible();
