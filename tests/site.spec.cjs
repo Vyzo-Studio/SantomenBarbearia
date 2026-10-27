@@ -326,3 +326,16 @@ test("Santomen calendar selects dates without the native browser picker",async({
  await expect(page.locator('#manual-form input[name="date"]')).toHaveValue("2026-10-16");
  await expect(dialog).toBeHidden();
 });
+
+test("Santomen admin startup wires login and navigation without runtime exceptions",async({page})=>{
+ const errors=[];
+ page.on("pageerror",e=>errors.push(e.message));
+ await page.goto("/admin.html");
+ await expect(page.locator("#login-form button[type=submit]")).toBeEnabled();
+ await page.locator("#login-email").fill("santomen476@gmail.com");
+ await page.locator("#login-password").fill("invalid-test-password");
+ await page.locator("#login-form button[type=submit]").click();
+ await expect(page.locator("#login-feedback")).toContainText(/Acesso negado|Conexão pronta|Falha ao carregar/i);
+ await expect(page.locator("#admin-panel")).toBeHidden();
+ expect(errors.filter(x=>/forEach is not a function|setupTabs|setupForms/.test(x))).toEqual([]);
+});

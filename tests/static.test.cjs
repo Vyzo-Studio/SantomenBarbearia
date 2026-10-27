@@ -147,7 +147,7 @@ test("Santomen uses exclusive Supabase while retaining WhatsApp public mode",()=
  assert.match(app,/cfg\.enableOnlineBooking===true/);
  assert.match(html,/config\.js\?v=santomen-exclusive-1/);
  assert.match(admin,/config\.js\?v=santomen-exclusive-1/);
- assert.match(admin,/admin\.js\?v=santomen-gestao-2/);
+ assert.match(admin,/admin\.js\?v=santomen-login-fix-3/);
  assert.match(read("supabase/migrations/20261026_santomen_public_booking_gate.sql"),/revoke execute on function public\.santomen_request_booking/);
  assert.doesNotMatch(cfg,/sb_secret_|service_role\s*:/);
 });
@@ -186,4 +186,15 @@ test("Santomen management has branded GNG-inspired organization without cross-br
  assert.match(seed,/false/);
  assert.match(seed,/Referência GNG/);
  assert.equal((seed.match(/^\s*\('/gm)||[]).length,13);
+});
+
+test("admin collection selectors do not break startup or stop login handlers",()=>{
+ const admin=read("admin.js");
+ const html=read("admin.html");
+ assert.match(html,/admin\.js\?v=santomen-login-fix-3/);
+ assert.doesNotMatch(admin,/(?<!\$)\$\("[^"]+"\)\.forEach/g);
+ assert.match(admin,/function setupTabs\(\)/);
+ assert.match(admin,/async function verifySession\(\)/);
+ assert.match(admin,/db\.auth\.signInWithPassword/);
+ assert.match(admin,/setInterval\(pollBookings,5000\)/);
 });
