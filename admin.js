@@ -4,6 +4,7 @@ const $=(q,root=document)=>root.querySelector(q);
 const $$=(q,root=document)=>[...root.querySelectorAll(q)];
 const configured=Boolean(/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||"") && /^sb_publishable_/.test(cfg.supabasePublishableKey||""));
 let db=null,currentUser=null;
+let bookingView="all",bookingSearch="",pollHandle=null,pollInFlight=false,pollFingerprint=null,pollErrorCount=0;
 const data={bookings:[],services:[],barbers:[],blocks:[],payments:[],allocations:[],refunds:[],sessions:[],media:[],settings:[]};
 const titles={dashboard:"VISÃO GERAL",bookings:"AGENDAMENTOS",manual:"AGENDAR MANUALMENTE",services:"SERVIÇOS E PREÇOS",barbers:"PROFISSIONAIS",blocks:"BLOQUEIO DE HORÁRIOS",finance:"CAIXA E FINANCEIRO",gallery:"PORTFÓLIO",settings:"CONFIGURAÇÕES"};
 const money=n=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format((Number(n)||0)/100);
@@ -16,7 +17,12 @@ const isoToday=()=>{const f=new Intl.DateTimeFormat("en-CA",{timeZone:"America/S
 function flash(text,kind="info",login=false){const el=$(login?"#login-feedback":"#admin-feedback");el.textContent=text;el.className="admin-flash "+kind}
 function rowTable(headers,rows){if(!rows.length)return '<p class="empty-result">Nenhum registro para esta visualização.</p>';return '<table class="data-table"><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join("")+'</tr></thead><tbody>'+rows.join("")+'</tbody></table>'}
 function opt(el,values,first){el.replaceChildren(new Option(first||"Selecione",""));values.forEach(v=>el.append(new Option(v.text,v.value)))}
-function activateTab(tab){$$("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));$$("[data-panel]").forEach(el=>el.hidden=el.dataset.panel!==tab);$("#panel-title").textContent=titles[tab]||"GESTÃO";window.scrollTo({top:0,behavior:"instant"})}
+function activateTab(tab){
+ $("#admin-tabs [data-tab]").forEach(b=>{const active=b.dataset.tab===tab;b.classList.toggle("active",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+ $("[data-panel]").forEach(el=>el.hidden=el.dataset.panel!==tab);
+ $("#panel-title").textContent=titles[tab]||"GESTÃO";
+ window.scrollTo({top:0,behavior:"instant"});
+}
 function filled(name){return data[name]||[]}
 function getBarber(id){return filled("barbers").find(x=>x.id===id)?.name||"Não identificado"}
 function getService(id){return filled("services").find(x=>x.id===id)?.name||"Não identificado"}
@@ -38,11 +44,20 @@ function renderDashboard(){
  $("#dashboard-bookings").innerHTML=rowTable(["DATA","CLIENTE","SERVIÇO","PROFISSIONAL","SITUAÇÃO"],next.map(x=>'<tr><td>'+datePT(x.booking_date)+' '+fmtTime(x.starts_at)+'</td><td>'+esc(x.customer_name)+'</td><td>'+esc(getService(x.service_id))+'</td><td>'+esc(getBarber(x.barber_id))+'</td><td>'+esc(x.status)+'</td></tr>'));
 }
 function renderBookings(){
- const day=$("#filter-date").value;const list=filled("bookings").filter(x=>!day||x.booking_date===day).sort((a,b)=>(b.booking_date+b.starts_at).localeCompare(a.booking_date+a.starts_at));
- $("#booking-table").innerHTML=rowTable(["DATA","CLIENTE","CONTATO","SERVIÇO","PROFISSIONAL","PREÇO","SITUAÇÃO","GERENCIAR"],list.map(b=>{
-  const actions=["pending","confirmed"].includes(b.status)?'<button type="button" class="tiny-button" data-status-id="'+esc(b.id)+'" data-status="confirmed">CONFIRMAR</button><button type="button" class="tiny-button" data-status-id="'+esc(b.id)+'" data-status="cancelled">CANCELAR</button>':"";
-  return '<tr><td>'+datePT(b.booking_date)+' '+fmtTime(b.starts_at)+'</td><td>'+esc(b.customer_name)+'</td><td>'+esc(b.phone)+'</td><td>'+esc(getService(b.service_id))+'</td><td>'+esc(getBarber(b.barber_id))+'</td><td>'+money(b.price_snapshot_cents)+'</td><td>'+esc(b.status)+'</td><td>'+actions+'</td></tr>';
- }));
+ const day=$("#filter-date").value;
+ const search=bookingSearch.trim().toLowerCase();
+ const all=filled("bookings");
+ const filtered=all.filter(b=>(!day||b.booking_date===day)&&(bookingView==="all"||b.status===bookingView)&&(!search||(b.customer_name||"").toLowerCase().includes(search)||digits(b.phone||"").includes(digits(search))&&(digits(search).length>0)));
+ const list=filtered.sort((a,b)=>(a.booking_date+a.starts_at).localeCompare(b.booking_date+b.starts_at));
+ const states={pending:"PENDENTE",confirmed:"CONFIRMADO",completed:"CONCLUÍDO",cancelled:"CANCELADO",rejected:"RECUSADO",expired:"EXPIRADO"};
+ const count=$("#santomen-booking-count");if(count)count.textContent=list.length+(list.length===1?" ATENDIMENTO":" ATENDIMENTOS");
+ const heading=$("#booking-date-summary");if(heading)heading.textContent=day?"AGENDA · "+datePT(day):"TODOS OS AGENDAMENTOS";
+ $("#booking-table").innerHTML=list.length?list.map(b=>{
+   const allowed=["pending","confirmed"].includes(b.status),name=esc(b.customer_name||""),phone=digits(b.phone||"");
+   const contact=phone?'<a class="tiny-button" href="https://wa.me/'+esc(phone.startsWith("55")?phone:"55"+phone)+'" target="_blank" rel="noopener noreferrer">WHATSAPP ↗</a>':"";
+   const controls=allowed?(b.status==="pending"?'<button type="button" class="tiny-button" data-status-id="'+esc(b.id)+'" data-status="confirmed">CONFIRMAR</button>':"")+'<button type="button" class="tiny-button" data-status-id="'+esc(b.id)+'" data-status="cancelled">CANCELAR</button>':"";
+   return '<article class="santomen-appointment" data-state="'+esc(b.status)+'"><div class="smappointment-top"><div><span class="smappointment-time">'+datePT(b.booking_date)+' · '+fmtTime(b.starts_at)+'</span><strong>'+name+'</strong></div><span class="smappointment-status">'+esc(states[b.status]||b.status)+'</span></div><div class="smappointment-meta"><span>'+esc(getService(b.service_id))+'</span><span>'+esc(getBarber(b.barber_id))+'</span><span>'+money(b.price_snapshot_cents)+'</span><span>'+esc(b.phone||"")+'</span></div><div class="smappointment-bottom"><span class="smappointment-meta">'+esc(b.source||"")+'</span><div class="smappointment-actions">'+contact+controls+'</div></div></article>';
+ }).join(""):'<div class="empty-result">NENHUM AGENDAMENTO ENCONTRADO PARA ESTE FILTRO.<br>ESCOLHA OUTRO DIA OU VEJA TODOS OS ATENDIMENTOS.</div>';
 }
 function renderServices(){
  $("#service-table").innerHTML=rowTable(["SERVIÇO","CATEGORIA","VALOR","DURAÇÃO","PÚBLICO","AÇÃO"],filled("services").map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.category)+'</td><td>'+money(x.price_cents)+'</td><td>'+esc(x.duration_minutes)+' min</td><td>'+ (x.is_active?"ATIVO":"INATIVO")+'</td><td><button class="tiny-button" type="button" data-edit-service="'+esc(x.id)+'">EDITAR</button></td></tr>'));
@@ -75,7 +90,82 @@ function renderSettings(){
  f.elements.name.value=s.name||"";f.elements.whatsapp.value=s.whatsapp||"";f.elements.address.value=s.address||"";
  f.elements.opening.value=fmtTime(s.opening);f.elements.closing.value=fmtTime(s.closing);f.elements.step.value=s.step_minutes||30;
 }
-function renderAll(){hydrateSelects();renderDashboard();renderBookings();renderServices();renderBarbers();renderBlocks();renderFinance();renderMedia();renderSettings()}
+
+function calendarDateCounts(){
+ const days={};
+ for(const b of filled("bookings")){if(b.booking_date&&!["cancelled","rejected","expired"].includes(b.status))days[b.booking_date]=(days[b.booking_date]||0)+1}
+ return days;
+}
+function emitAgendaEvent(){
+ window.dispatchEvent(new CustomEvent("santomen:bookings-updated",{detail:{dates:calendarDateCounts()}}));
+ const pending=filled("bookings").filter(b=>b.status==="pending").length;
+ const badge=$("#nav-pending-count");if(badge){badge.textContent=String(pending);badge.hidden=pending===0}
+}
+function paintSync(message,ok=true){
+ const sync=$("#santomen-sync"),label=$("#santomen-sync-label"),time=$("#santomen-sync-time");
+ if(!sync||!label||!time)return;
+ sync.classList.toggle("is-offline",!ok);
+ label.textContent=message;
+ time.textContent=new Date().toLocaleTimeString("pt-BR",{timeZone:cfg.timezone||"America/Sao_Paulo"})+" · "+(ok?"AGENDA ATUALIZADA":"NÃO SINCRONIZADO");
+}
+function calendarFinanceDay(date){
+ if(!date)return null;
+ const dateObject=new Date(date);if(Number.isNaN(dateObject.valueOf()))return null;
+ const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(dateObject).map(x=>[x.type,x.value]));
+ return parts.year+"-"+parts.month+"-"+parts.day;
+}
+function renderFinancialOverview(){
+ const el=$("#santomen-finance-overview");if(!el)return;
+ const now=isoToday(),month=now.slice(0,7),year=now.slice(0,4),payments=filled("payments"),refunds=filled("refunds");
+ function total(records,dateField,rule){return records.filter(x=>{const d=calendarFinanceDay(x[dateField]);return d&&rule(d)}).reduce((v,x)=>v+(Number(x.amount_cents)||0),0)}
+ const net=rule=>total(payments,"paid_at",rule)-total(refunds,"refunded_at",rule);
+ const metrics=[["LÍQUIDO HOJE",money(net(d=>d===now))],["LÍQUIDO NO MÊS",money(net(d=>d.startsWith(month)))],["LÍQUIDO NO ANO",money(net(d=>d.startsWith(year)))],["TRANSAÇÕES",String(payments.length)]];
+ el.innerHTML=metrics.map(([label,value])=>'<div class="stat"><div class="stat-name">'+esc(label)+'</div><strong>'+esc(value)+'</strong></div>').join("");
+}
+function exportFinanceCSV(){
+ if(!currentUser)return;
+ const lines=[["DATA","CLIENTE","SERVIÇO","VALOR RECEBIDO (R$)","FORMA(S)","VALOR ESTORNADO (R$)"]];
+ for(const p of filled("payments")){
+  const booking=filled("bookings").find(b=>b.id===p.booking_id),parts=filled("allocations").filter(x=>x.payment_id===p.id).map(x=>x.method+":"+money(x.amount_cents)).join(" + ");
+  const refund=filled("refunds").filter(x=>x.payment_id===p.id).reduce((a,b)=>a+b.amount_cents,0);
+  lines.push([datePT(p.paid_at),booking?.customer_name||"",getService(booking?.service_id),String((p.amount_cents/100).toFixed(2)).replace(".",","),parts,String((refund/100).toFixed(2)).replace(".",",")]);
+ }
+ // Prefix spreadsheet formulas, so imported CSV cannot execute cell formulas.
+ const safe=v=>{let value=String(v??"");if(/^[\s]*[=+\-@]/.test(value))value="'"+value;return '"'+value.replaceAll('"','""')+'"'};
+ const csv="\uFEFF"+lines.map(row=>row.map(safe).join(";")).join("\r\n");
+ const object=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+ const a=document.createElement("a");a.href=object;a.download="santomen-financeiro-"+isoToday()+".csv";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(object),1000);
+}
+async function pollBookings(){
+ if(!currentUser||!db||pollInFlight||document.hidden)return;
+ pollInFlight=true;
+ try{
+  const fresh=await queryRows("bookings");
+  if(!currentUser)return;
+  const fingerprint=JSON.stringify(fresh.map(b=>[b.id,b.status,b.updated_at,b.created_at,b.booking_date,b.starts_at]));
+  if(fingerprint!==pollFingerprint){
+   const previousIds=new Set(filled("bookings").map(b=>b.id));
+   const newBookings=fresh.filter(b=>!previousIds.has(b.id));
+   data.bookings=fresh;pollFingerprint=fingerprint;
+   renderDashboard();renderBookings();hydrateSelects();emitAgendaEvent();
+   if(newBookings.length&&previousIds.size){
+    flash("NOVO AGENDAMENTO RECEBIDO: "+newBookings.length+" — agenda sincronizada.","success");
+   }
+  }
+  pollErrorCount=0;paintSync("ATUALIZAÇÃO AUTOMÁTICA · 5 SEGUNDOS");
+ }catch(error){
+  pollErrorCount++;
+  if(pollErrorCount===1||pollErrorCount%12===0)console.warn("Falha na sincronização de agendamentos Santomen:",error);
+  paintSync("CONEXÃO INSTÁVEL · NOVA TENTATIVA",false);
+ }finally{pollInFlight=false}
+}
+function stopPolling(){if(pollHandle!==null){clearInterval(pollHandle);pollHandle=null}pollInFlight=false;pollFingerprint=null;paintSync("MONITORAMENTO PAUSADO",false)}
+function startPolling(){
+ if(pollHandle!==null||!currentUser)return;
+ pollHandle=setInterval(pollBookings,5000);
+ paintSync("ATUALIZAÇÃO AUTOMÁTICA · 5 SEGUNDOS");
+}
+function renderAll(){hydrateSelects();renderDashboard();renderBookings();renderServices();renderBarbers();renderBlocks();renderFinance();renderFinancialOverview();renderMedia();renderSettings();emitAgendaEvent()}
 async function queryRows(table,order){
  let q=db.from("santomen_"+table).select("*");if(order)q=q.order(order,{ascending:false});const {data:rows,error}=await q;
  if(error)throw Error("Falha em "+table+": "+error.message);return rows||[];
@@ -87,7 +177,7 @@ async function load(){
   const tables=["bookings","services","barbers","blocks","payments","payment_allocations","refunds","cash_sessions","media","settings"];
   const result=await Promise.all(tables.map(name=>queryRows(name)));
   const keys=["bookings","services","barbers","blocks","payments","allocations","refunds","sessions","media","settings"];
-  keys.forEach((key,i)=>data[key]=result[i]);renderAll();
+  keys.forEach((key,i)=>data[key]=result[i]);pollFingerprint=JSON.stringify(filled("bookings").map(b=>[b.id,b.status,b.updated_at,b.created_at,b.booking_date,b.starts_at]));renderAll();paintSync("ATUALIZAÇÃO AUTOMÁTICA · 5 SEGUNDOS");
   flash("Dados atualizados. Última consulta: "+new Date().toLocaleTimeString("pt-BR",{timeZone:cfg.timezone||"America/Sao_Paulo"}),"success");
  }catch(error){flash(error.message+". Algumas informações podem estar desatualizadas.","error");console.error(error)}
  finally{$("#refresh").disabled=false}
@@ -103,7 +193,19 @@ async function mutate(table,operation,payload,id){
 }
 function setupTabs(){
  $$("#admin-tabs [data-tab]").forEach(btn=>btn.addEventListener("click",()=>activateTab(btn.dataset.tab)));
- $("#refresh").addEventListener("click",load);$("#filter-date").addEventListener("change",renderBookings);$("#filter-clear").addEventListener("click",()=>{$("#filter-date").value="";renderBookings()});
+ $("#refresh").addEventListener("click",load);
+ $("#filter-date").addEventListener("change",renderBookings);
+ $("#filter-clear").addEventListener("click",()=>{$("#filter-date").value="";$("#filter-date").dispatchEvent(new Event("change",{bubbles:true}));renderBookings()});
+ document.addEventListener("click",e=>{const button=e.target.closest("[data-nav-target]");if(button)activateTab(button.dataset.navTarget)});
+ $("#santomen-booking-filters [data-booking-view]").forEach(button=>button.addEventListener("click",()=>{
+  bookingView=button.dataset.bookingView;
+  $("#santomen-booking-filters [data-booking-view]").forEach(b=>{const active=b===button;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active))});
+  renderBookings();
+ }));
+ $("#santomen-booking-search")?.addEventListener("input",e=>{bookingSearch=e.target.value;renderBookings()});
+ $("#santomen-export-csv")?.addEventListener("click",exportFinanceCSV);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&currentUser)pollBookings()});
+ window.addEventListener("pagehide",stopPolling);
 }
 function setupForms(){
  $("#manual-form").addEventListener("submit",async e=>{e.preventDefault();const f=e.currentTarget,z=f.elements;try{await invoke("santomen_admin_manual_booking",{p_service_id:z.service.value,p_barber_id:z.barber.value,p_date:z.date.value,p_time:z.time.value,p_name:z.name.value.trim(),p_phone:digits(z.phone.value),p_source:z.source.value},"Agendamento manual registrado.");f.reset()}catch{}});
@@ -140,7 +242,7 @@ async function verifySession(){
  const {data:membership,error}=await db.from("santomen_admins").select("user_id").eq("user_id",auth.user.id).maybeSingle();
  if(error||!membership){await db.auth.signOut();flash("Conta autenticada, mas não autorizada como administrador.","error",true);return false}
  currentUser=auth.user;$("#admin-login").hidden=true;$("#admin-panel").hidden=false;$("#logout").hidden=false;
- await load();return true;
+ await load();startPolling();return true;
 }
 async function start(){
  setupTabs();setupForms();setupActions();
@@ -157,7 +259,7 @@ async function start(){
   catch(error){flash("Acesso negado: "+error.message,"error",true)}
   finally{btn.disabled=false}
  });
- $("#logout").addEventListener("click",async()=>{await db.auth.signOut();currentUser=null;$("#admin-panel").hidden=true;$("#admin-login").hidden=false;$("#logout").hidden=true;flash("Sessão encerrada.","success",true)});
- db.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"){currentUser=null;$("#admin-panel").hidden=true;$("#admin-login").hidden=false;$("#logout").hidden=true}});
+ $("#logout").addEventListener("click",async()=>{stopPolling();await db.auth.signOut();currentUser=null;$("#admin-panel").hidden=true;$("#admin-login").hidden=false;$("#logout").hidden=true;flash("Sessão encerrada.","success",true)});
+ db.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"){stopPolling();currentUser=null;$("#admin-panel").hidden=true;$("#admin-login").hidden=false;$("#logout").hidden=true}});
 }
 start();
