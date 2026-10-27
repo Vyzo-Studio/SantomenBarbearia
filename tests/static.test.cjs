@@ -2,7 +2,7 @@ const {test}=require("node:test");const assert=require("node:assert/strict");
 const fs=require("node:fs"),path=require("node:path"),vm=require("node:vm");
 const root=path.resolve(__dirname,"..");const read=p=>fs.readFileSync(path.join(root,p),"utf8");
 test("frontend JavaScript parses",()=>{
- for(const file of ["config.js","i18n.js","app.js","admin.js"])assert.doesNotThrow(()=>new vm.Script(read(file),{filename:file}));
+ for(const file of ["config.js","i18n.js","app.js","admin.js","admin-calendar.js"])assert.doesNotThrow(()=>new vm.Script(read(file),{filename:file}));
 });
 test("essential static assets exist and local document links resolve",()=>{
  const html=read("index.html");assert.match(html,/<html lang="pt-BR">/);
@@ -147,7 +147,7 @@ test("Santomen uses exclusive Supabase while retaining WhatsApp public mode",()=
  assert.match(app,/cfg\.enableOnlineBooking===true/);
  assert.match(html,/config\.js\?v=santomen-exclusive-1/);
  assert.match(admin,/config\.js\?v=santomen-exclusive-1/);
- assert.match(admin,/admin\.js\?v=santomen-exclusive-1/);
+ assert.match(admin,/admin\.js\?v=santomen-gestao-2/);
  assert.match(read("supabase/migrations/20261026_santomen_public_booking_gate.sql"),/revoke execute on function public\.santomen_request_booking/);
  assert.doesNotMatch(cfg,/sb_secret_|service_role\s*:/);
 });
@@ -163,4 +163,27 @@ test("Haus teardown migration is narrowly scoped to Santomen tables",()=>{
  assert.match(cfg,/supabaseUrl: "https:\/\/whsitzmpotmhbyqpeimh\.supabase\.co"/);
  assert.match(cfg,/supabasePublishableKey: "sb_publishable_[^"]+"/);
  assert.doesNotMatch(cfg,/pmhpgrdeknzbvegkrnxi/);
+});
+
+test("Santomen management has branded GNG-inspired organization without cross-brand database references",()=>{
+ const html=read("admin.html"),style=read("admin-premium.css"),script=read("admin.js"),calendar=read("admin-calendar.js");
+ assert.match(html,/SANTOMEN/);
+ for(const id of ["santomen-inline-calendar","santomen-booking-filters","santomen-booking-search","santomen-booking-count","santomen-sync-label","santomen-finance-overview","santomen-export-csv","dashboard-stats","booking-table","payment-form","manual-form","service-form","barber-form","block-form","media-form","settings-form"])assert.match(html,new RegExp('id="'+id+'"'));
+ for(const tab of ["dashboard","bookings","manual","blocks","finance","services","barbers","gallery","settings"])assert.match(html,new RegExp('data-tab="'+tab+'"'));
+ assert.match(html,/admin-premium\.css\?v=2/);
+ assert.match(html,/admin-calendar\.js\?v=2/);
+ assert.match(style,/#f4d900/i);
+ assert.match(script,/setInterval\(pollBookings,5000\)/);
+ assert.match(script,/document\.hidden/);
+ assert.match(script,/pollInFlight/);
+ assert.match(script,/new CustomEvent\("santomen:bookings-updated"/);
+ assert.match(script,/function renderFinancialOverview/);
+ assert.match(script,/function exportFinanceCSV/);
+ assert.match(calendar,/role|aria-label|aria-pressed/);
+ assert.doesNotMatch(script,/gng_|haus_|ueqfokfnjsjgocotvdae|pmhpgrdeknzbvegkrnxi/i);
+ assert.doesNotMatch(html,/GNG BARBEARIA|HAUS BARBER/i);
+ const seed=read("supabase/migrations/20261027_santomen_gng_reference_catalog.sql");
+ assert.match(seed,/false/);
+ assert.match(seed,/Referência GNG/);
+ assert.equal((seed.match(/^\s*\('/gm)||[]).length,13);
 });

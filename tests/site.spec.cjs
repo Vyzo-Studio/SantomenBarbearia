@@ -289,3 +289,36 @@ test("online booking stays intentionally off until Santomen has authorized real 
  await expect(page.locator("#service option")).toHaveCount(4);
  await expect(page.locator("#booking-time")).toHaveValue("a_combinar");
 });
+
+test("Santomen management has the premium brand workspace with protected data",async({page})=>{
+ await page.setViewportSize({width:1366,height:900});
+ await page.goto("/admin.html");
+ await expect(page.locator("#admin-login")).toBeVisible();
+ await expect(page.locator("#admin-panel")).toBeHidden();
+ await expect(page.locator("#login-form button[type=submit]")).toBeEnabled();
+ const names=await page.locator("#admin-tabs button[data-tab]").evaluateAll(elements=>elements.map(el=>el.dataset.tab));
+ expect(names).toEqual(["dashboard","bookings","manual","blocks","finance","services","barbers","gallery","settings"]);
+ await expect(page.locator("#santomen-sync-label")).toContainText("5 SEGUNDOS");
+ await expect(page.locator("#santomen-inline-calendar")).toContainText(/OUTUBRO|NOVEMBRO|DEZEMBRO|JANEIRO|FEVEREIRO|MARÇO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO/);
+ const root=await page.evaluate(()=>({db:window.SANTOMEN_CONFIG?.supabaseUrl,connected:!!window.SANTOMEN_CONFIG?.supabasePublishableKey}));
+ expect(root.db).toBe("https://whsitzmpotmhbyqpeimh.supabase.co");
+ expect(root.connected).toBe(true);
+});
+test("Santomen calendar selects dates without the native browser picker",async({page})=>{
+ await page.setViewportSize({width:390,height:850});
+ await page.goto("/admin.html");
+ await page.evaluate(()=>{document.querySelector("#admin-login").hidden=true;document.querySelector("#admin-panel").hidden=false});
+ const calendar=page.locator("#santomen-inline-calendar");
+ await expect(calendar.locator(".smcal-day")).toHaveCount(31);
+ await calendar.locator('.smcal-day[data-smcal-date="2026-10-15"]').click();
+ await expect(page.locator("#filter-date")).toHaveValue("2026-10-15");
+ await calendar.locator('[data-smcal-shift="1"]').click();
+ await expect(calendar).toContainText("NOVEMBRO");
+ await page.locator('#admin-tabs [data-tab="manual"]').click();
+ await page.locator("#manual-form .smcal-field-trigger").click();
+ const dialog=page.locator(".smcal-dialog");
+ await expect(dialog).toBeVisible();
+ await dialog.locator('[data-smcal-date="2026-10-16"]').click();
+ await expect(page.locator('#manual-form input[name="date"]')).toHaveValue("2026-10-16");
+ await expect(dialog).toBeHidden();
+});

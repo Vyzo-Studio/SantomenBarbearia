@@ -147,7 +147,7 @@ async function pollBookings(){
    const previousIds=new Set(filled("bookings").map(b=>b.id));
    const newBookings=fresh.filter(b=>!previousIds.has(b.id));
    data.bookings=fresh;pollFingerprint=fingerprint;
-   renderDashboard();renderBookings();hydrateSelects();emitAgendaEvent();
+   renderDashboard();renderBookings();emitAgendaEvent();
    if(newBookings.length&&previousIds.size){
     flash("NOVO AGENDAMENTO RECEBIDO: "+newBookings.length+" — agenda sincronizada.","success");
    }
