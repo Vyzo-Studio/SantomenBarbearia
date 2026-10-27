@@ -273,6 +273,7 @@ test("mobile navigation does not obscure booking editing or modal content",async
  await expect(nav).toBeHidden();
  await expect(page.locator("#media-lightbox")).toBeVisible();
  await page.locator("#close-lightbox").click();
+ await expect(page.locator("#media-lightbox")).not.toHaveAttribute("open");
  // Browsers may restore focus to the preceding booking field after dialog closes.
  // The nav intentionally remains hidden while a booking field has focus.
  await page.locator("#customer-phone").blur();
@@ -308,6 +309,7 @@ test("Santomen calendar selects dates without the native browser picker",async({
  await page.setViewportSize({width:390,height:850});
  await page.goto("/admin.html");
  await page.evaluate(()=>{document.querySelector("#admin-login").hidden=true;document.querySelector("#admin-panel").hidden=false});
+ await page.locator('#admin-tabs [data-tab="bookings"]').click();
  const calendar=page.locator("#santomen-inline-calendar");
  await expect(calendar.locator(".smcal-day")).toHaveCount(31);
  await calendar.locator('.smcal-day[data-smcal-date="2026-10-15"]').click();

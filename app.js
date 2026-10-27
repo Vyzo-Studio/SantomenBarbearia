@@ -50,6 +50,12 @@
     const msg=$("#team-message");if(msg && state.barbers.length){msg.textContent=state.barbers.map(b=>b.name).join(" • ")+". Consulte a disponibilidade de cada profissional na agenda."}
   }
   function renderGallery(){
+    const lightbox=$("#media-lightbox");
+    if(lightbox&&!lightbox.dataset.santomenCloseReady){
+      lightbox.dataset.santomenCloseReady="true";
+      $("#close-lightbox")?.addEventListener("click",()=>lightbox.close());
+      lightbox.addEventListener("click",e=>{if(e.target===lightbox)lightbox.close()});
+    }
     if(!state.media.length)return;
     const root=$("#gallery"),filters=$("#gallery-filters"),dialog=$("#media-lightbox"),image=$("#lightbox-image"),caption=$("#lightbox-caption");
     if(!root||!filters||!dialog)return;
@@ -71,8 +77,7 @@
       });
     };
     buttons.forEach(btn=>btn.addEventListener("click",()=>draw(btn.dataset.filter)));
-    $("#close-lightbox").onclick=()=>dialog.close();
-    dialog.addEventListener("click",e=>{if(e.target===dialog)dialog.close()});
+
     dialog.addEventListener("close",()=>image.removeAttribute("src"));
     draw("Todos");
     $("#gallery-note").textContent="Fotos divulgadas pela administração da Santomen Barbearia.";
