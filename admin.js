@@ -18,8 +18,8 @@ function flash(text,kind="info",login=false){const el=$(login?"#login-feedback":
 function rowTable(headers,rows){if(!rows.length)return '<p class="empty-result">Nenhum registro para esta visualização.</p>';return '<table class="data-table"><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join("")+'</tr></thead><tbody>'+rows.join("")+'</tbody></table>'}
 function opt(el,values,first){el.replaceChildren(new Option(first||"Selecione",""));values.forEach(v=>el.append(new Option(v.text,v.value)))}
 function activateTab(tab){
- $("#admin-tabs [data-tab]").forEach(b=>{const active=b.dataset.tab===tab;b.classList.toggle("active",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
- $("[data-panel]").forEach(el=>el.hidden=el.dataset.panel!==tab);
+ $$("#admin-tabs [data-tab]").forEach(b=>{const active=b.dataset.tab===tab;b.classList.toggle("active",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+ $$("[data-panel]").forEach(el=>el.hidden=el.dataset.panel!==tab);
  $("#panel-title").textContent=titles[tab]||"GESTÃO";
  window.scrollTo({top:0,behavior:"instant"});
 }
@@ -197,9 +197,9 @@ function setupTabs(){
  $("#filter-date").addEventListener("change",renderBookings);
  $("#filter-clear").addEventListener("click",()=>{$("#filter-date").value="";$("#filter-date").dispatchEvent(new Event("change",{bubbles:true}));renderBookings()});
  document.addEventListener("click",e=>{const button=e.target.closest("[data-nav-target]");if(button)activateTab(button.dataset.navTarget)});
- $("#santomen-booking-filters [data-booking-view]").forEach(button=>button.addEventListener("click",()=>{
+ $$("#santomen-booking-filters [data-booking-view]").forEach(button=>button.addEventListener("click",()=>{
   bookingView=button.dataset.bookingView;
-  $("#santomen-booking-filters [data-booking-view]").forEach(b=>{const active=b===button;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active))});
+  $$("#santomen-booking-filters [data-booking-view]").forEach(b=>{const active=b===button;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active))});
   renderBookings();
  }));
  $("#santomen-booking-search")?.addEventListener("input",e=>{bookingSearch=e.target.value;renderBookings()});
