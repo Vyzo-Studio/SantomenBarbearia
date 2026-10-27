@@ -258,7 +258,7 @@
     document.addEventListener("keydown",ev=>{if(ev.key==="Escape"){menu.classList.remove("open");toggle.setAttribute("aria-expanded","false")}});
   }
   function setup(){
-    setupNavigation();setupMobileBottomNavigation();renderServices();renderBarbers();setupForm();loadCatalog();
+    setupNavigation();setupMobileBottomNavigation();renderServices();renderBarbers();renderGallery();setupForm();loadCatalog();
     document.addEventListener("santomen:language",()=>{renderServices();renderBarbers()});
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup,{once:true});else setup();

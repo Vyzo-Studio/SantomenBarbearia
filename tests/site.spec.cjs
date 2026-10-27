@@ -310,6 +310,7 @@ test("Santomen calendar selects dates without the native browser picker",async({
  await page.goto("/admin.html");
  await page.evaluate(()=>{document.querySelector("#admin-login").hidden=true;document.querySelector("#admin-panel").hidden=false});
  await page.locator('#admin-tabs [data-tab="bookings"]').click();
+ await expect(page.locator('[data-panel="bookings"]')).toBeVisible();
  const calendar=page.locator("#santomen-inline-calendar");
  await expect(calendar.locator(".smcal-day")).toHaveCount(31);
  await calendar.locator('.smcal-day[data-smcal-date="2026-10-15"]').click();
